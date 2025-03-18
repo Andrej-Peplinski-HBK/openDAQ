@@ -1694,7 +1694,7 @@ ModuleLibrary loadModuleInternal(const LoggerComponentPtr& loggerComponent, cons
         );
     }
 
-    // Andrej Peplinski 2025-03-18: This give control to the library to do some initialization...
+    // Andrej Peplinski 2025-03-18: This give control to the library to do some initialization (like for instance check for a valid license module)...
     if (moduleLibrary.has(checkDependenciesFunc))
     {
         using CheckDependenciesFunc = ErrCode (*)(IString**);
