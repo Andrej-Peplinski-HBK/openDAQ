@@ -52,3 +52,4 @@ shared/tools/RTGen/src/project/*.user
 
 # license-header-checker
 shared/tools/license-header-checker/bin/
+*.pls
