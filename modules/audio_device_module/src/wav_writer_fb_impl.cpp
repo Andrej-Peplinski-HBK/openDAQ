@@ -180,7 +180,7 @@ void WAVWriterFbImpl::processEventPacket(const EventPacketPtr& packet)
 
 void WAVWriterFbImpl::calculate()
 {
-    auto lock = this->getAcquisitionLock();
+    //auto lock = this->getAcquisitionLock();             //Andrej Peplinski: This lock will cause an exception in the 'processEventPacket -> stopStoreInternal -> setPropertyValue("Storing", false)' method chain as it tries to take the same lock once again!
     SizeT availableData = reader.getAvailableCount();
 
     std::vector<float> inputData;
