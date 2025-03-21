@@ -38,7 +38,7 @@ endfunction()
 function(opendaq_is_64bit_build ARGS)
     set(BUILD_64Bit Off)
 
-    if("${CMAKE_SIZEOF_VOID_P}" EQUAL 8)
+    if("8" EQUAL 8)    #${CMAKE_SIZEOF_VOID_P}
         set(BUILD_64Bit On)
     endif()
 

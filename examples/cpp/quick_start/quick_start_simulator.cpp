@@ -8,6 +8,7 @@
 
 using namespace daq;
 
+//See: https://opendaq.github.io/opendaq/dev/getting_started/quick_start_application.html#own_simulator
 int main(int /*argc*/, const char* /*argv*/[])
 {
     using namespace std::chrono_literals;
