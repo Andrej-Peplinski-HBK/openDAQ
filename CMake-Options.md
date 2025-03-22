@@ -87,6 +87,7 @@ The following options might be used to customize the build passing them in the *
 | `OPENDAQ_BUILD_DOCUMENTATION` | Bool | `OFF` | Build Doxygen documentation | Doxygen must be installed to generate the documentation |
 | `APP_ENABLE_EXAMPLE_APPS` | Bool | `OFF` | Enable example openDAQ applications | Requires `DAQMODULES_REF_FB_MODULE` and `DAQMODULES_REF_DEVICE_MODULE`<br> to be ON, otherwise, the applications build is skipped |
 | `APP_ENABLE_AUDIO_APP` | Bool | `OFF` | Enable openDAQ audio application | Requires `DAQMODULES_AUDIO_DEVICE_MODULE` to be ON, otherwise, the audio application build is skipped |
+| `APP_ENABLE_LICENSE_APP` | Bool | `OFF` | Enable openDAQ license demo application
 | `APP_ENABLE_WEBPAGE_EXAMPLES` | Bool | `OFF` | Enable webpage examples | - |
 | `DAQSIMULATOR_ENABLE_SIMULATOR_APP` | Bool | `OFF` | Enable device simulator application | Requires `OPENDAQ_ENABLE_OPCUA`,<br>`OPENDAQ_ENABLE_NATIVE_STREAMING`,<br>`DAQMODULES_OPENDAQ_SERVER_MODULE`,<br>`DAQMODULES_REF_FB_MODULE` and <br>`DAQMODULES_REF_DEVICE_MODULE`<br> to be ON, otherwise, the simulator application build is skipped |
 

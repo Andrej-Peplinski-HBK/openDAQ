@@ -2,6 +2,7 @@ set_cmake_folder_context(TARGET_FOLDER_NAME)
 
 option(APP_ENABLE_EXAMPLE_APPS "Enable example ${SDK_NAME} applications" OFF)
 option(APP_ENABLE_AUDIO_APP "Enable ${SDK_NAME} audio application" OFF)
+option(APP_ENABLE_LICENSE_APP "Enable ${SDK_NAME} license application" OFF)
 
 if (APP_ENABLE_EXAMPLE_APPS AND NOT (DAQMODULES_REF_DEVICE_MODULE AND DAQMODULES_REF_FB_MODULE))
     message(WARNING "DAQMODULES_REF_DEVICE_MODULE and DAQMODULES_REF_FB_MODULE must be ON to enable Example applications")
@@ -17,4 +18,8 @@ endif()
 
 if(APP_ENABLE_AUDIO_APP AND DAQMODULES_AUDIO_DEVICE_MODULE)
     add_subdirectory(audio_application)
+endif()
+
+if(APP_ENABLE_LICENSE_APP)
+    add_subdirectory(license_application)
 endif()

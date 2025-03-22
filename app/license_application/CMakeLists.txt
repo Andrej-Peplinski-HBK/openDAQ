@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.24)
+set_cmake_folder_context(TARGET_FOLDER_NAME license_application)
+
+project(LicenseApplication CXX)
+
+add_subdirectory(src)
+add_subdirectory(protected_analytics_module)
