@@ -25,8 +25,7 @@ add_library(${LIB_NAME} SHARED ${SRC_Include}
 
 add_library(${SDK_TARGET_NAMESPACE}::${LIB_NAME} ALIAS ${LIB_NAME})
 
-target_link_libraries(${LIB_NAME} PUBLIC daq::opendaq
-)
+target_link_libraries(${LIB_NAME} PUBLIC daq::opendaq)
 
 target_include_directories(${LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
                                               $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>
