@@ -13,4 +13,9 @@ ProtectedAnalyticsModule::ProtectedAnalyticsModule(ContextPtr ctx)
 {
 }
 
+void ProtectedAnalyticsModule::setLicenseComponent(const void* licenseComponent)
+{
+    // Method implementation
+}
+
 END_NAMESPACE_PROTECTED_ANALYTICS_MODULE

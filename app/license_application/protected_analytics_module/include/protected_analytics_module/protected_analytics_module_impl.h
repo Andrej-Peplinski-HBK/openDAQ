@@ -13,6 +13,7 @@ public:
     //DictPtr<IString, IFunctionBlockType> onGetAvailableFunctionBlockTypes() override;
     //FunctionBlockPtr onCreateFunctionBlock(const StringPtr& id, const ComponentPtr& parent, const StringPtr& localId, const PropertyObjectPtr& config) override;
 
+    void setLicenseComponent(const void* licenseComponent);
 private:
 };
 
