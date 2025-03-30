@@ -2,14 +2,14 @@
 #include <vector>
 #include <algorithm> // For std::equal
 
+#include <protected_analytics_module/license_module_verification.h>
+
 #ifdef WIN32
     #include <windows.h>
     #include <Softpub.h>
     #include <wincrypt.h>
     #include <wintrust.h>
     #include <mscat.h>
-
-    #include <protected_analytics_module/license_module_verification.h>
 
 // The implementation of this function has been inspired by https://github.com/dragokas/Verify-Signature-Cpp/blob/master/verify.cpp#L140.
 daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8_t>& expected_license_hashBuffer, daq::IString** errMsg)
@@ -179,7 +179,7 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
 #else
     #warning "A valid implementation of 'CanTrustLicenseModule' is not available for this platform."
 
-    daq::ErrCode CanTrustLicenseModule(const fs::path& path, daq::IString** errMsg)
+    daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8_t>& expected_license_hashBuffer, daq::IString** errMsg)
     {
         std::cerr << "The verification of the license module has not been implemented!!!" << std::endl;
         return  OPENDAQ_SUCCESS;    //... just to get the compilation going ...
