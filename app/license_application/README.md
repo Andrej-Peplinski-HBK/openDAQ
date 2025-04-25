@@ -1,13 +1,13 @@
 # Welcome to the License demo application
 
 ## Introduction
-This application show-cases how to prevent that a custom `protected_analytics_module` can be used in a demo environment, where a user might have tempered with the license component. The application consists of three modules:
+This application show-cases how to prevent that a custom `protected_analytics_module` can be used in a demo environment, where a user might have tempered with a fictious license component. The application consists of three modules:
 
 * `demo application` (console executable)
 * `protected_analytics_module` (dll/so)
 * `license_library` (dll/so)
 
-where `protected_analytics_module` contains the functionality that we want to protect. This is achieved by using `license_library` that verifies that the correct number of licenses are available. To prevent malicious users from patching `license_library` to circumvent the license protection we digitally sign `license_library`. Thus, any attempt to modify `license_library` will break the digital signature - which will be discovered by the `protected_analytics_module` module, which consequently refused to be loaded into the [openDAQ](../../README.md) SDK.
+where `protected_analytics_module` contains the functionality that we want to protect. This is achieved by using `license_library` that verifies that the correct number of licenses are available. To prevent malicious users from "patching" the `license_library` to circumvent the license protection; we will digitally sign the `license_library`. Thus, any attempt to modify `license_library` will break the digital signature - which will be discovered by the `protected_analytics_module` module, which consequently refused to be loaded into the [openDAQ](../../README.md) SDK.
 
 ## Preliminary steps
 1. Create your own, self-signed certificate (in absence of a proper certificate)
@@ -55,7 +55,7 @@ where `protected_analytics_module` contains the functionality that we want to pr
     ```
 
 ## Workflow
-After the compilation you will be able to run the application from the output directory.
+After compilation, you will be able to run the application from the output directory.
 
 It is recommended to have three versions of `license_library`:
 

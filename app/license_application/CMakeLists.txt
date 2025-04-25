@@ -3,5 +3,6 @@ set_cmake_folder_context(TARGET_FOLDER_NAME license_application)
 
 project(LicenseApplication CXX)
 
-add_subdirectory(src)
+add_subdirectory(license_library)
 add_subdirectory(protected_analytics_module)
+add_subdirectory(src)

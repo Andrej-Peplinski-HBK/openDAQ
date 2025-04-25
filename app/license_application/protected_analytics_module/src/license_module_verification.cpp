@@ -182,7 +182,7 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
     daq::ErrCode CanTrustLicenseModule(const fs::path& path, daq::IString** errMsg)
     {
         std::cerr << "The verification of the license module has not been implemented!!!" << std::endl;
-        return  OPENDAQ_SUCCESS;    //... just to get the compiliation going ...
+        return  OPENDAQ_SUCCESS;    //... just to get the compilation going ...
     }
 #endif  // WIN32
 

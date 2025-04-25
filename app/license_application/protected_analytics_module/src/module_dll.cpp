@@ -4,12 +4,16 @@
 #include <coretypes/filesystem.h>
 #include <coretypes/stringobject_factory.h>
 #include <boost/dll/shared_library.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/filesystem.hpp>
 
+#include <license_library/license_checker.h>
 #include <protected_analytics_module/module_dll.h>
 #include <protected_analytics_module/protected_analytics_module_impl.h>
 #include <protected_analytics_module/license_module_verification.h>
 
 using namespace daq::modules::protected_analytics_module;
+using namespace daq::modules::license_library;
 
 std::mutex mtx;
 uint8_t expected_license_hashBuffer[32] = {0};
@@ -68,7 +72,31 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
         return retVal;    
     
     // Try create the license component (now that we are sure that the module is valid)
+    {
+        std::error_code libraryErrCode;
+        const auto programLocation = boost::dll::program_location();
+        boost::filesystem::path exePath = boost::filesystem::absolute(programLocation.c_str()).parent_path();
+        boost::filesystem::path dllPath = exePath / "LicenseLibrary-64-3-debug.dll";
+        boost::dll::shared_library moduleLibrary2(dllPath.c_str(), libraryErrCode);
 
+        if (!libraryErrCode){
+            const auto fctName = "createLicenseChecker";
+            if (moduleLibrary2.has(fctName))
+            {
+                using CreateLicenseCheckerFunc = daq::ErrCode (*)(ILicenseChecker**);
+                CreateLicenseCheckerFunc createLicenseChecker = moduleLibrary2.get<daq::ErrCode(ILicenseChecker**)>(fctName);
+                
+                daq::ObjectPtr<ILicenseChecker> licenseCheckerPtr;
+                const auto errCode = createLicenseChecker(&licenseCheckerPtr);
+                if (OPENDAQ_SUCCEEDED(errCode))
+                {
+                    daq::SizeT noOfFeatureTokens = 100;
+                    licenseCheckerPtr->getNoOfFeatureTokens(daq::String("abc"), &noOfFeatureTokens);                    
+                }
+            }
+        }
+        
+    }
     //const auto moduleHandle = moduleLibrary.native();
 
     return retVal;
@@ -93,8 +121,7 @@ OPENDAQ_MODULE_API daq::ErrCode createProtectedAnalyticsModule(daq::IModule** mo
 }
 
 #ifdef OPENDAQ_TRACK_SHARED_LIB_OBJECT_COUNT
-std::atomic<std::size_t> daq::daqSharedLibObjectCount(0);  // Required otherwise we get a linker error 👉 LNK2001: unresolved external
-                                                           // symbol "struct std::atomic<unsigned __int64> daq::daqSharedLibObjectCount"
+std::atomic<std::size_t> daq::daqSharedLibObjectCount(0);  // Required otherwise we get a linker error 👉 LNK2001: unresolved external symbol "struct std::atomic<unsigned __int64> daq::daqSharedLibObjectCount"
 
 //  OPENDAQ_MODULE_API daq::ErrCode daqGetObjectCount(daq::SizeT* count)
 // {

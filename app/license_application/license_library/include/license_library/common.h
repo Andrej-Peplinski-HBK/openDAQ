@@ -1,0 +1,5 @@
+#pragma once
+#include <coretypes/common.h>
+
+#define BEGIN_NAMESPACE_LICENSE_LIBRARY BEGIN_NAMESPACE_OPENDAQ_MODULE(license_library)
+#define END_NAMESPACE_LICENSE_LIBRARY END_NAMESPACE_OPENDAQ_MODULE

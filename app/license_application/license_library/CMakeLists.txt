@@ -2,6 +2,6 @@
 
 set_cmake_folder_context(TARGET_FOLDER_NAME)
 
-project(ProtectedAnalyticsModule VERSION ${OPENDAQ_PACKAGE_VERSION} LANGUAGES CXX)
+project(LicenseLibrary VERSION ${OPENDAQ_PACKAGE_VERSION} LANGUAGES CXX)
 
 add_subdirectory(src)
