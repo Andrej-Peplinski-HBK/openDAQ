@@ -54,6 +54,20 @@ where `protected_analytics_module` contains the functionality that we want to pr
     sigcheck license_library-tempered.dll
     ```
 
+6. Create a demo license
+
+    Create simple text file `license.lic` and save it under:
+
+    * Windows: <em>C:\temp\license.lic</em>
+    * Linux: <em>~/license.lic</em>
+    
+    Use this file to experiment with the behaviour of the application depending on which licenses are available.
+    
+    The format of the file is:
+    ```
+    feature: {tokenCount}
+    ```
+
 ## Workflow
 After compilation, you will be able to run the application from the output directory.
 

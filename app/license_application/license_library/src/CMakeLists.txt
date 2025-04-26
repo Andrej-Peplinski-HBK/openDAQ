@@ -27,7 +27,7 @@ add_library(${LIB_NAME} SHARED ${SRC_Include}
 add_library(${SDK_TARGET_NAMESPACE}::${LIB_NAME} ALIAS ${LIB_NAME})
 
 target_include_directories(${LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-                                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>
+                                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>                                              
                                               $<INSTALL_INTERFACE:include>
 )
 
@@ -43,19 +43,14 @@ if (MSVC)
             /bigobj 
             /wd4100     #Avoid 'unreferenced formal parameter' compiler warning  (Otherwise will not compile in VS in Release build...)        
     )
-
-    # target_link_libraries(${LIB_NAME}
-    #     PRIVATE 
-    #         wintrust        # Required for License Certificate verification
-    #         Crypt32         # Required for License Certificate verification
-    # )
 endif()
 
 target_link_libraries(${LIB_NAME} 
     PUBLIC
         daq::opendaq
-    PRIVATE 
-        $<BUILD_INTERFACE:Boost::dll>
+        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
+    PRIVATE
+        $<BUILD_INTERFACE:Boost::dll>        
 )
 
 #See: cmake\openDAQUtils.cmake to understand the next line

@@ -90,8 +90,31 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
                 const auto errCode = createLicenseChecker(&licenseCheckerPtr);
                 if (OPENDAQ_SUCCEEDED(errCode))
                 {
-                    daq::SizeT noOfFeatureTokens = 100;
-                    licenseCheckerPtr->getNoOfFeatureTokens(daq::String("abc"), &noOfFeatureTokens);                    
+                    auto feature = daq::String("fft");
+                    daq::SizeT overallCountInitial = 0;
+                    daq::SizeT remainingCountInitial = 0;
+
+                    if (OPENDAQ_SUCCEEDED(licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCountInitial, &remainingCountInitial))
+                     && remainingCountInitial > 0)
+                    {
+                        licenseCheckerPtr->checkOut(feature, remainingCountInitial);
+
+                        daq::SizeT overallCount2 = 0;
+                        daq::SizeT remainingCount2 = 0;
+                        licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount2, &remainingCount2);
+
+                        assert(overallCountInitial == overallCount2);
+                        assert(remainingCount2 == 0);
+
+                        licenseCheckerPtr->checkIn(feature, remainingCountInitial);
+
+                        daq::SizeT overallCount3 = 0;
+                        daq::SizeT remainingCount3 = 0;
+                        licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount3, &remainingCount3);
+
+                        assert(overallCountInitial == overallCount3);
+                        assert(overallCountInitial == remainingCount3);
+                    }                    
                 }
             }
         }
