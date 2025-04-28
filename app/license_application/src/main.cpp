@@ -56,7 +56,11 @@ int main(int argc, const char* argv[])
 
     std::error_code libraryErrCode;
     boost::filesystem::path exePath = boost::filesystem::absolute(argv[0]).parent_path();
+#if _DEBUG
     boost::filesystem::path dllPath = exePath / "ProtectedAnalyticsModule-64-3-debug.module.dll";
+#else
+    boost::filesystem::path dllPath = exePath / "ProtectedAnalyticsModule-64-3.module.dll";
+#endif
     boost::dll::shared_library moduleLibrary(dllPath.c_str(), libraryErrCode);
 
     if (libraryErrCode)

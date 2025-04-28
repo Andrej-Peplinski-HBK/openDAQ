@@ -39,18 +39,16 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 {
     std::lock_guard<std::mutex> lock(mtx);
 
-    const auto noneExistingString = L"C:\\DoesNotExist.dll";
-    const auto regularFile = L"C:\\HBK\\dev\\SourceCode\\Certificates\\ProtectedAnalyticsModule-64-3-debug.module.dll";
-    const auto temperedFile = L"C:\\HBK\\dev\\SourceCode\\Certificates\\ProtectedAnalyticsModule-64-3-debug.module - tempered.dll";
-    
-    const fs::path path(regularFile);
+    const auto programLocation = boost::dll::program_location();
+    const auto exeParentDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();    
+    const auto fullLicPath = exeParentDir / "LicenseLibrary-64-3-signed.dll";
 
     std::error_code errorCode;
-    boost::dll::shared_library moduleLibrary(path, errorCode);
+    boost::dll::shared_library moduleLibrary(fullLicPath.c_str(), errorCode);
     if (errorCode)
     {
         *errMsg = daq::String(fmt::format("Failed to load '{0}' (details: '{1}', code: {2}, category: {3})!",
-                                          path.string(),
+                                          fullLicPath.string(),
                                           errorCode.message(),
                                           errorCode.value(),
                                           errorCode.category().name()))
@@ -73,52 +71,49 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     
     // Try create the license component (now that we are sure that the module is valid)
     {
-        std::error_code libraryErrCode;
-        const auto programLocation = boost::dll::program_location();
-        boost::filesystem::path exePath = boost::filesystem::absolute(programLocation.c_str()).parent_path();
-        boost::filesystem::path dllPath = exePath / "LicenseLibrary-64-3-debug.dll";
-        boost::dll::shared_library moduleLibrary2(dllPath.c_str(), libraryErrCode);
+        const auto fctName = "createLicenseChecker";
+        if (!moduleLibrary.has(fctName))
+        {
+            *errMsg = daq::String(fmt::format("License '{0}' is not a valid module (details: '{1}' export is missing)!",
+                                              fullLicPath.string(),
+                                              fctName))
+                          .addRefAndReturn();
+            return OPENDAQ_ERR_RESOLVEFAILED;
+        }
 
-        if (!libraryErrCode){
-            const auto fctName = "createLicenseChecker";
-            if (moduleLibrary2.has(fctName))
+        using CreateLicenseCheckerFunc = daq::ErrCode (*)(ILicenseChecker**);
+        CreateLicenseCheckerFunc createLicenseChecker = moduleLibrary.get<daq::ErrCode(ILicenseChecker**)>(fctName);
+
+        daq::ObjectPtr<ILicenseChecker> licenseCheckerPtr;
+        const auto errCode = createLicenseChecker(&licenseCheckerPtr);
+        if (OPENDAQ_SUCCEEDED(errCode))
+        {
+            auto feature = daq::String("fft");
+            daq::SizeT overallCountInitial = 0;
+            daq::SizeT remainingCountInitial = 0;
+
+            if (OPENDAQ_SUCCEEDED(licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCountInitial, &remainingCountInitial)) &&
+                remainingCountInitial > 0)
             {
-                using CreateLicenseCheckerFunc = daq::ErrCode (*)(ILicenseChecker**);
-                CreateLicenseCheckerFunc createLicenseChecker = moduleLibrary2.get<daq::ErrCode(ILicenseChecker**)>(fctName);
-                
-                daq::ObjectPtr<ILicenseChecker> licenseCheckerPtr;
-                const auto errCode = createLicenseChecker(&licenseCheckerPtr);
-                if (OPENDAQ_SUCCEEDED(errCode))
-                {
-                    auto feature = daq::String("fft");
-                    daq::SizeT overallCountInitial = 0;
-                    daq::SizeT remainingCountInitial = 0;
+                licenseCheckerPtr->checkOut(feature, remainingCountInitial);
 
-                    if (OPENDAQ_SUCCEEDED(licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCountInitial, &remainingCountInitial))
-                     && remainingCountInitial > 0)
-                    {
-                        licenseCheckerPtr->checkOut(feature, remainingCountInitial);
+                daq::SizeT overallCount2 = 0;
+                daq::SizeT remainingCount2 = 0;
+                licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount2, &remainingCount2);
 
-                        daq::SizeT overallCount2 = 0;
-                        daq::SizeT remainingCount2 = 0;
-                        licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount2, &remainingCount2);
+                assert(overallCountInitial == overallCount2);
+                assert(remainingCount2 == 0);
 
-                        assert(overallCountInitial == overallCount2);
-                        assert(remainingCount2 == 0);
+                licenseCheckerPtr->checkIn(feature, remainingCountInitial);
 
-                        licenseCheckerPtr->checkIn(feature, remainingCountInitial);
+                daq::SizeT overallCount3 = 0;
+                daq::SizeT remainingCount3 = 0;
+                licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount3, &remainingCount3);
 
-                        daq::SizeT overallCount3 = 0;
-                        daq::SizeT remainingCount3 = 0;
-                        licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount3, &remainingCount3);
-
-                        assert(overallCountInitial == overallCount3);
-                        assert(overallCountInitial == remainingCount3);
-                    }                    
-                }
+                assert(overallCountInitial == overallCount3);
+                assert(overallCountInitial == remainingCount3);
             }
         }
-        
     }
     //const auto moduleHandle = moduleLibrary.native();
 

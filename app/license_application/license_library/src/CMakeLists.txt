@@ -57,3 +57,27 @@ target_link_libraries(${LIB_NAME}
 set(OPENDAQ_MODULE_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
 opendaq_set_module_properties(${LIB_NAME} ${PROJECT_VERSION_MAJOR})
 create_version_header(${LIB_NAME})
+
+#Add post-build step to create a signed version of the library
+if (WIN32 AND BUILD_64Bit)
+    #Please note that depending on the build configuration the output file name may or maynot contain "debug". There, we must use the wildcard copying approach...
+    string(REPLACE "/" "\\" OUTPUT_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/$(Configuration)")
+
+    set(FULL_MODULE_OUTPUT_PATH "${OUTPUT_DIR}\\${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}*${OPENDAQ_MODULE_SUFFIX}")
+    set(FULL_MODULE_SIGNED_PATH "${OUTPUT_DIR}\\${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-signed${OPENDAQ_MODULE_SUFFIX}")
+    set(FULL_CERT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../certs/Selfsigned-CA.pfx")
+    string(REPLACE "/" "\\" FULL_CERT_PATH ${FULL_CERT_PATH})
+
+    add_custom_command(TARGET ${LIB_NAME} POST_BUILD
+        # The following command uses xcopy to be able to copy the output file (which may contain "debug" in the name) to the signed version.
+        # The standard does not work for this approach. However, even with xcopy we get a prompt: 
+        #       "Specify a file name or directory name on the target (F = file, D = directory)?"
+        # In oder to suppress this prompt, we use the "echo F |" command before the xcopy command. This approach might
+        # fail depending on the operating system (e.g. "File" in German is "Datei").
+        # (Also see: https://stackoverflow.com/questions/3018289/xcopy-file-rename-suppress-does-xxx-specify-a-file-name-message)
+        COMMAND (echo F | xcopy /Y ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH}) | echo "Done copying ..."
+        #COMMAND ${CMAKE_COMMAND} -E copy ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH} <- does not work!
+        COMMAND ${CMAKE_COMMAND} -E echo "Start signing ${FULL_MODULE_SIGNED_PATH} with ${FULL_CERT_PATH}... "
+        COMMAND signtool sign /v /n "Test Certificate Authority (CA)" /f ${FULL_CERT_PATH} /p Passw0rd123 /fd SHA256 /t http://timestamp.digicert.com ${FULL_MODULE_SIGNED_PATH}
+    )
+endif()

@@ -142,6 +142,8 @@ ErrCode LicenseChecker::checkOut(IString* feature, SizeT count)
             // First time checkout...
             _featureTokensCheckedOut[featureName] = count;
         }
+
+        return OPENDAQ_SUCCESS;
     }
     else
     {
@@ -182,6 +184,8 @@ ErrCode LicenseChecker::checkIn(IString* feature, SizeT count)
             _featureTokensCheckedOut.erase(itCheckedOut);
         else
             _featureTokensCheckedOut[featureName] = checkedOutCount - count;
+
+        return OPENDAQ_SUCCESS;
     }
     else
     {
