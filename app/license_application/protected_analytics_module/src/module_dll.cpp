@@ -47,13 +47,10 @@ BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserv
 void __attribute__((constructor)) SO_init()
 {
     /* do some global initialization */
-    _logger->debug("ProtectedAnalytics: SO_init");
 }
 
 void __attribute__((destructor)) SO_uninit()
 {
-    _logger->debug("ProtectedAnalytics: SO_uninit");
-
     licenseCheckerPtr = nullptr;
     licenseCheckerLibrary.unload();
 }
