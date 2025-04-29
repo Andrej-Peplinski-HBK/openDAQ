@@ -4,7 +4,6 @@
 // verify that no clients hold dangling when the module unloads (remark: This is a similar approach to the one being used in ATL/COM - see: http://diranieh.com/ATLCOM/Architecture.htm)
 std::atomic<int> moduleOverallObjectRefCounter; //Similar to: extern std::atomic<std::size_t> daqSharedLibObjectCount;
 
-//#ifdef _WIN32
 #ifdef WIN32
 
 #include <wtypes.h>

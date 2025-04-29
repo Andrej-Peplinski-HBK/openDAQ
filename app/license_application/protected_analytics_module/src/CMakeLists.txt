@@ -57,6 +57,7 @@ endif()
 target_link_libraries(${LIB_NAME} 
     PUBLIC
         daq::opendaq
+        spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
     PRIVATE 
         $<BUILD_INTERFACE:Boost::dll>
         daq::LicenseLibrary

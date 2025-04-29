@@ -2,7 +2,7 @@
 #include <fstream>
 #include <mutex>
 #include <regex>
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 BEGIN_NAMESPACE_LICENSE_LIBRARY
 
