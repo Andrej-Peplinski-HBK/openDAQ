@@ -23,7 +23,19 @@ BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserv
     return TRUE;
 }
 #else
-#pragma warning("DllMain is not implemented for this platform!")
+
+void __attribute__((constructor)) SO_init()
+{
+  /* do some global initialization */
+  printf("LicenseLibrary: SO_init\n");
+}
+
+void __attribute__((destructor)) SO_uninit()
+{
+  /* do some global cleanup */
+  printf("LicenseLibrary: SO_uninit\n");
+}
+
 #endif
 
 using namespace daq::modules::license_library;

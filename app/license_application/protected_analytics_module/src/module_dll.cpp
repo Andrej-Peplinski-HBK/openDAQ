@@ -18,6 +18,23 @@ using namespace daq::modules::license_library;
 std::mutex mtx;
 uint8_t expected_license_hashBuffer[32] = {0};
 
+#ifdef __linux__
+//See:
+// * https://www.opengate.at/blog/2020/03/dllmain/
+// * https://codeberg.org/GateNetwork/gate-blog-classroom/src/branch/main/c_cpp/dllmain_linux/
+void __attribute__((constructor)) SO_init()
+{
+  /* do some global initialization */
+  printf("ProtectedAnalytics: SO_init\n");
+}
+
+void __attribute__((destructor)) SO_uninit()
+{
+  /* do some global cleanup */
+  printf("ProtectedAnalytics: SO_uninit\n");
+}
+#endif
+
 OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, uint8_t* hashBuffer)
 {
     const auto MAX_HASH_SIZE = sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]);
