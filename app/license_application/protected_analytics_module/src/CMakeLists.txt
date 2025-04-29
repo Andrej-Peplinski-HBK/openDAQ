@@ -66,6 +66,5 @@ add_dependencies(${LIB_NAME}
     daq::LicenseLibrary
 )
 
-
 opendaq_set_module_properties(${LIB_NAME} ${PROJECT_VERSION_MAJOR})
 create_version_header(${LIB_NAME})

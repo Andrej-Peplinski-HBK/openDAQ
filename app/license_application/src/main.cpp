@@ -2,6 +2,7 @@
 
 #include <boost/dll/shared_library.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 
 #include <opendaq/opendaq.h>
 
@@ -12,7 +13,7 @@ void printHelp()
     std::cout << "Usage: " << std::endl;
     std::cout << "  -hash <hash>" << std::endl << std::endl;
     std::cout << "Example:" << std::endl;
-    std::cout << "  -hash E01D211BD6CF2F2C4BA8DCDABBA929D0FD8D5457 " << std::endl << std::endl;
+    std::cout << "  -hash E01D211BD6CF2F2C4BA8DCDABBA929D0FD8D5457" << std::endl << std::endl;
     std::cout << "Please note that: " << std::endl;
     std::cout << "  a.) On Windows you can determine the hash by taking the first hit of:" << std::endl;
     std::cout << "    >> signtool verify /pa /v ${license_library} | findstr \"SHA1\"" << std::endl;
@@ -20,6 +21,68 @@ void printHelp()
               << std::endl;
 }
 
+boost::filesystem::path getProtectedAnalyticsModulePath()
+{
+    boost::filesystem::path exePath = boost::filesystem::absolute(boost::dll::program_location().c_str()).parent_path();
+    
+    // Search for files matching the pattern "ProtectedAnalyticsModule*module.*"
+    std::vector<boost::filesystem::path> matchingFiles;
+    
+    try {
+        for (const auto& entry : boost::filesystem::directory_iterator(exePath)) {
+            if (boost::filesystem::is_regular_file(entry)) {
+                std::string filename = entry.path().filename().string();
+                if (filename.find("ProtectedAnalyticsModule") != std::string::npos && 
+                    filename.find("module") != std::string::npos) {
+                    std::cout << "Found matching module: " << filename << std::endl;
+                    matchingFiles.push_back(entry.path());
+                }
+            }
+        }
+    } catch (const boost::filesystem::filesystem_error& e) {
+        std::cerr << "Error scanning directory: " << e.what() << std::endl;
+    }
+    
+    // Use the first matching file if found, otherwise fall back to the default path
+    if (matchingFiles.size() == 1) {
+        return matchingFiles.front();
+    }
+
+    // Throw a filesystem_error with an appropriate error code
+    if (matchingFiles.empty())
+    {
+        throw boost::filesystem::filesystem_error(
+            "ProtectedAnalyticsModule not found",
+            exePath,
+            boost::system::errc::make_error_code(boost::system::errc::no_such_file_or_directory)
+        );
+    }
+
+    throw boost::filesystem::filesystem_error(
+        "Unable to uniquely identify the ProtectedAnalyticsModule!",
+        exePath,
+        boost::system::errc::make_error_code(boost::system::errc::invalid_seek)
+    );
+    
+    // //Check if we are in a debug build (by looking for the debug folder in the path)
+    // const auto itContainsDebug = std::find_if(exePath.begin(), exePath.end(), [](const auto& part) {
+    //     return part.string().find("debug") != std::string::npos;
+    // });
+
+    // #if _WIN32
+    // {
+    //     return exePath / "ProtectedAnalyticsModule-64-3-debug.module.dll";
+    // }
+    // #elif defined(__linux__)
+    // {
+    //     //E.g.: "/home/apeplinski/dev/SourceCode/GitHub/openDAQ/build/x64/gcc/full/debug/bin/libProtectedAnalyticsModule-64-3-debug.module.so"
+    //     boost::filesystem::path dllPath = exePath / "libProtectedAnalyticsModule-64-3-debug.module.so";
+    //     return dllPath;
+    // }
+    // #else
+    //     #pragma error "Unsupported platform!"
+    // #endif
+}
 int main(int argc, const char* argv[])
 {
 #pragma region Prime the test application by injecting the expected license hash into protected_analytics_module
@@ -54,15 +117,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    std::error_code libraryErrCode;
-    boost::filesystem::path exePath = boost::filesystem::absolute(argv[0]).parent_path();
-#if _DEBUG
-    boost::filesystem::path dllPath = exePath / "ProtectedAnalyticsModule-64-3-debug.module.dll";
-#else
-    boost::filesystem::path dllPath = exePath / "ProtectedAnalyticsModule-64-3.module.dll";
-#endif
-    boost::dll::shared_library moduleLibrary(dllPath.c_str(), libraryErrCode);
+    const auto dllPath = getProtectedAnalyticsModulePath();
 
+    std::error_code libraryErrCode;
+    boost::dll::shared_library moduleLibrary(dllPath.c_str(), libraryErrCode);
     if (libraryErrCode)
     {
         std::cerr << "Module \"" << dllPath << "\" failed to load. Error: " << libraryErrCode.value() << std::endl;

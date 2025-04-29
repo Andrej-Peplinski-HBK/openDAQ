@@ -53,7 +53,7 @@ target_link_libraries(${LIB_NAME}
         $<BUILD_INTERFACE:Boost::dll>        
 )
 
-#See: cmake\openDAQUtils.cmake to understand the next line
+#Remove 'module' from output binary file name (See: cmake\openDAQUtils.cmake to understand the next line)
 set(OPENDAQ_MODULE_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
 opendaq_set_module_properties(${LIB_NAME} ${PROJECT_VERSION_MAJOR})
 create_version_header(${LIB_NAME})

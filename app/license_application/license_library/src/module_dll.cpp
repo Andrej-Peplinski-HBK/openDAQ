@@ -1,4 +1,3 @@
-#include <wtypes.h>
 #include <license_library/module_dll.h>
 
 // Reference counter for all objects that reside inside this module and that is used to
@@ -7,6 +6,8 @@ std::atomic<int> moduleOverallObjectRefCounter; //Similar to: extern std::atomic
 
 //#ifdef _WIN32
 #ifdef WIN32
+
+#include <wtypes.h>
 
 BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserved*/)
 {

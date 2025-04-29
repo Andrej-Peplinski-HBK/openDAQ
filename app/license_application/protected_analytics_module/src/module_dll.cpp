@@ -41,7 +41,7 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 
     const auto programLocation = boost::dll::program_location();
     const auto exeParentDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();    
-    const auto fullLicPath = exeParentDir / "LicenseLibrary-64-3-signed.dll";
+    const auto fullLicPath = exeParentDir / "LicenseLibrary-64-3-signed.dll";   //Please note that under linux the module is called "libLicenseLibrary-64-3-debug.so" - which means that we subsequently fail to load this license library...
 
     std::error_code errorCode;
     boost::dll::shared_library moduleLibrary(fullLicPath.c_str(), errorCode);
