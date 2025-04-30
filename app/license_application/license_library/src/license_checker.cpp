@@ -30,10 +30,6 @@ LicenseChecker::LicenseChecker(std::atomic<int>* ptrModuleOverallObjectRefCounte
 
     ReloadLicenseFile();
 }
-LicenseChecker::~LicenseChecker()
-{
-    _ptrModuleOverallObjectRefCounter = nullptr;
-}
 
 int LicenseChecker::addRef()
 {

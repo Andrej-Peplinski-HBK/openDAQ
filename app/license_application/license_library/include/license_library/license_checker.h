@@ -20,8 +20,7 @@ class LicenseChecker : public ImplementationOf<ILicenseChecker>
 public:
     
     // Static method to get the singleton, !!!none-reference added!!! instance
-    static ILicenseChecker* getInstance(std::atomic<int>* ptrModuleOverallObjectRefCounter);   
-    ~LicenseChecker() override;
+    static ILicenseChecker* getInstance(std::atomic<int>* ptrModuleOverallObjectRefCounter);
 
     ErrCode INTERFACE_FUNC getNoOfFeatureTokens(const IString* feature, SizeT* overallCount, SizeT* remainingCount) override;
     ErrCode INTERFACE_FUNC checkOut(IString* feature, SizeT count) override;
@@ -34,8 +33,6 @@ public:
 
 private:
     explicit LicenseChecker(std::atomic<int>* ptrModuleOverallObjectRefCounter);
-    LicenseChecker(const LicenseChecker&) = delete;
-    LicenseChecker& operator=(const LicenseChecker&) = delete;
 
     void ReloadLicenseFile();
 
