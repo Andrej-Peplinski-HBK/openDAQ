@@ -28,7 +28,7 @@ LicenseChecker::LicenseChecker(std::atomic<int>* ptrModuleOverallObjectRefCounte
     _logger = spdlog::stdout_color_mt("LicenseChecker");
     // By default the logger is set to info level. Adjust using: _logger->set_level(spdlog::level::debug);
 
-    ReloadLicenseFile();
+    ReloadLicenseFile(false);
 }
 
 int LicenseChecker::addRef()
@@ -69,6 +69,9 @@ ErrCode LicenseChecker::getNoOfFeatureTokens(const IString* feature, SizeT* over
         return OPENDAQ_ERR_ARGUMENT_NULL;
     }
 
+    //Take lock to protect the dictionary from race conditions
+    std::lock_guard<std::mutex> lock(_mutex);
+
     const std::string featureName = daq::StringPtr::Borrow(feature);
     const auto itOverall = _featureTokensOverall.find(featureName);
     if (itOverall != _featureTokensOverall.cend())
@@ -106,6 +109,9 @@ ErrCode LicenseChecker::checkOut(IString* feature, SizeT count)
         _logger->error("checkOut: Arg 'count' must be > 0!");
         return OPENDAQ_ERR_INVALID_ARGUMENT;
     }
+
+    // Take lock to protect the dictionary from race conditions
+    std::lock_guard<std::mutex> lock(_mutex);
 
     const std::string featureName = daq::StringPtr::Borrow(feature);
     const auto itOverall = _featureTokensOverall.find(featureName);
@@ -162,6 +168,9 @@ ErrCode LicenseChecker::checkIn(IString* feature, SizeT count)
         return OPENDAQ_ERR_INVALID_ARGUMENT;
     }
 
+    // Take lock to protect the dictionary from race conditions
+    std::lock_guard<std::mutex> lock(_mutex);
+
     const std::string featureName = daq::StringPtr::Borrow(feature);
     const auto itCheckedOut = _featureTokensCheckedOut.find(featureName);
     if (itCheckedOut != _featureTokensCheckedOut.cend())
@@ -210,7 +219,7 @@ const std::string getLicenseFilePath()
     // return execPath.string() + "/license.lic";
 }
 
-void LicenseChecker::ReloadLicenseFile()
+void LicenseChecker::ReloadLicenseFile(bool useLock)
 {
     const auto licFilePath = getLicenseFilePath();
 
@@ -229,6 +238,11 @@ void LicenseChecker::ReloadLicenseFile()
         }
         return;
     }
+
+    // Take lock to protect the dictionary from race conditions
+    std::unique_lock<std::mutex> lock(_mutex, std::defer_lock);
+    if (useLock)
+        lock.lock();
 
     _featureTokensOverall.clear();
 

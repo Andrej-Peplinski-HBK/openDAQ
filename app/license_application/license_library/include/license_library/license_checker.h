@@ -34,7 +34,7 @@ public:
 private:
     explicit LicenseChecker(std::atomic<int>* ptrModuleOverallObjectRefCounter);
 
-    void ReloadLicenseFile();
+    void ReloadLicenseFile(bool useLock);
 
 private:
     static inline ILicenseChecker* _instance = nullptr;
