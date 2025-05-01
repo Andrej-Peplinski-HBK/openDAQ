@@ -58,7 +58,7 @@ void __attribute__((destructor)) SO_uninit()
 
 OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, uint8_t* hashBuffer)
 {
-    const auto MAX_HASH_SIZE = sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]);
+    constexpr const auto MAX_HASH_SIZE = sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]);
     if (hashSize > MAX_HASH_SIZE)
     {
         _logger->error("Hash size is too large!");
@@ -74,7 +74,7 @@ OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, 
     _logger->info("Successfully initialized the hash externally.");
     _logger->info("This just happens in this demo application to allow users to");
     _logger->info("provide their own hash key stemming from a custom certificate.");
-    _logger->info("In a real application one would 'embed' the hash key into the application, though...");
+    _logger->info("In a real application one would 'embed' the hash key into the application though...");
 
     return OPENDAQ_SUCCESS;
 }

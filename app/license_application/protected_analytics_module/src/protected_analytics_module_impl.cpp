@@ -1,11 +1,12 @@
 #include <coretypes/version_info_factory.h>
 #include <opendaq/custom_log.h>
+#include <opendaq/exceptions.h>
 #include <protected_analytics_module/protected_analytics_module_impl.h>
+#include <protected_analytics_module/passthrough_fb_impl.h>
 #include <protected_analytics_module/version.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
-
 
 ProtectedAnalyticsModule::ProtectedAnalyticsModule(ContextPtr ctx)
     : Module(
@@ -25,30 +26,30 @@ void ProtectedAnalyticsModule::setLicenseComponent(daq::modules::license_library
     _licenseComponent = licenseComponent;
 }
 
-//auto feature = daq::String("fft");
-//daq::SizeT overallCountInitial = 0;
-//daq::SizeT remainingCountInitial = 0;
-//
-//if (OPENDAQ_SUCCEEDED(licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCountInitial, &remainingCountInitial)) &&
-//    remainingCountInitial > 0)
-//{
-//    licenseCheckerPtr->checkOut(feature, remainingCountInitial);
-//
-//    daq::SizeT overallCount2 = 0;
-//    daq::SizeT remainingCount2 = 0;
-//    licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount2, &remainingCount2);
-//
-//    assert(overallCountInitial == overallCount2);
-//    assert(remainingCount2 == 0);
-//
-//    licenseCheckerPtr->checkIn(feature, remainingCountInitial);
-//
-//    daq::SizeT overallCount3 = 0;
-//    daq::SizeT remainingCount3 = 0;
-//    licenseCheckerPtr->getNoOfFeatureTokens(feature, &overallCount3, &remainingCount3);
-//
-//    assert(overallCountInitial == overallCount3);
-//    assert(overallCountInitial == remainingCount3);
-//}
+DictPtr<IString, IFunctionBlockType> ProtectedAnalyticsModule::onGetAvailableFunctionBlockTypes()
+{    
+    auto passThroughType = function_block::PassthroughFbImpl::CreateType();
+    return Dict<IString, IFunctionBlockType>({
+        { passThroughType.getId(), passThroughType }
+    });
+}
+
+FunctionBlockPtr ProtectedAnalyticsModule::onCreateFunctionBlock(const StringPtr& id,
+    const ComponentPtr& parent,
+    const StringPtr& localId,
+    const PropertyObjectPtr& config)
+{
+    if (_licenseComponent == nullptr)
+    {
+        _logger->error("License component has not been set! Cannot create function block.");
+        DAQ_THROW_EXCEPTION(NotAssignedException, "License component has not been set!");
+    }
+
+    if (id == function_block::PassthroughFbImpl::TypeID)
+        return createWithImplementation<IFunctionBlock, function_block::PassthroughFbImpl>(context, parent, localId, _licenseComponent);
+
+    LOG_W("Function block \"{}\" not found", id);
+    DAQ_THROW_EXCEPTION(NotFoundException, "Function block not found");
+}
 
 END_NAMESPACE_PROTECTED_ANALYTICS_MODULE

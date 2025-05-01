@@ -5,11 +5,13 @@ set(MODULE_BINARY_HEADER_DIR ${CMAKE_CURRENT_BINARY_DIR}/../include)
 set(SRC_Include common.h
                 module_dll.h
                 protected_analytics_module_impl.h
+                passthrough_fb_impl.h
 )
 
 set(SRC_Srcs module_dll.cpp
              protected_analytics_module_impl.cpp
              license_module_verification.cpp
+             passthrough_fb_impl.cpp
 )
 
 prepend_include(${TARGET_FOLDER_NAME} SRC_Include)
@@ -17,7 +19,9 @@ prepend_include(${TARGET_FOLDER_NAME} SRC_Include)
 set(MODULE_FILES ${MODULE_HEADERS_DIR}/module_dll.h
                  ${MODULE_HEADERS_DIR}/protected_analytics_module_impl.h
                  ${MODULE_HEADERS_DIR}/license_module_verification.h
-                module_dll.cpp)
+                 ${MODULE_HEADERS_DIR}/passthrough_fb_impl.h
+                module_dll.cpp
+                passthrough_fb_impl.cpp)
 
 source_group("module" FILES ${MODULE_FILES})
 

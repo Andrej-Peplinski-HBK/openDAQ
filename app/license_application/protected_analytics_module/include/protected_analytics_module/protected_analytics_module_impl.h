@@ -13,8 +13,8 @@ class ProtectedAnalyticsModule final : public Module
 public:
     explicit ProtectedAnalyticsModule(ContextPtr ctx);
 
-    //DictPtr<IString, IFunctionBlockType> onGetAvailableFunctionBlockTypes() override;
-    //FunctionBlockPtr onCreateFunctionBlock(const StringPtr& id, const ComponentPtr& parent, const StringPtr& localId, const PropertyObjectPtr& config) override;
+    DictPtr<IString, IFunctionBlockType> onGetAvailableFunctionBlockTypes() override;
+    FunctionBlockPtr onCreateFunctionBlock(const StringPtr& id, const ComponentPtr& parent, const StringPtr& localId, const PropertyObjectPtr& config) override;
 
     void setLicenseComponent(daq::modules::license_library::ILicenseChecker* const licenseComponent);
 
