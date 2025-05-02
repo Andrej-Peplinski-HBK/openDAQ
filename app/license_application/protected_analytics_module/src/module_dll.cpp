@@ -85,7 +85,7 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     const auto programLocation = boost::dll::program_location();
     const auto exeParentDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
 #ifdef WIN32
-    const moduleSimpleName = "LicenseLibrary-64-3-signed.dll";
+    const auto moduleSimpleName = "LicenseLibrary-64-3-signed.dll";
 #else
     const auto moduleSimpleName = "libLicenseLibrary-64-3-signed.so";
 #endif

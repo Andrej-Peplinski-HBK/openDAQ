@@ -55,11 +55,6 @@ target_link_libraries(${LIB_NAME}
 
 # Copy license file to build output directory
 set(LICENSE_FILE ${PROJECT_SOURCE_DIR}/licenses/license.lic)
-#configure_file(${LICENSE_FILE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/license.lic COPYONLY)
-add_custom_command(
-    TARGET ${LIB_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LICENSE_FILE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
 
 # Add license file as a dependency
 set_property(
@@ -91,6 +86,8 @@ if(BUILD_64Bit)     #Required check as "64" is part of the file name...
         string(REPLACE "/" "\\" FULL_CERT_PATH ${FULL_CERT_PATH})
 
         add_custom_command(TARGET ${LIB_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LICENSE_FILE} ${OUTPUT_DIR}
+
             # The following command uses xcopy to be able to copy the output file (which may contain "debug" in the name) to the signed version.
             # The standard does not work for this approach. However, even with xcopy we get a prompt: 
             #       "Specify a file name or directory name on the target (F = file, D = directory)?"
@@ -107,6 +104,7 @@ if(BUILD_64Bit)     #Required check as "64" is part of the file name...
         set(FULL_MODULE_SIGNED_PATH "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/lib${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-signed${OPENDAQ_MODULE_SUFFIX}")
 
         add_custom_command(TARGET ${LIB_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LICENSE_FILE} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
             COMMAND ${CMAKE_COMMAND} -E copy ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH}
         )
     else()

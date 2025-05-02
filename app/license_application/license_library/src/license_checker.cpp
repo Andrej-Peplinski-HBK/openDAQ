@@ -211,7 +211,7 @@ const std::string getLicenseFilePath()
 
     // Alternatively, consider using relative path to executable...
     const auto execPath = boost::dll::program_location().parent_path();
-    return execPath.string() + "/license.lic";
+    return (execPath / "license.lic").string();
 }
 
 void LicenseChecker::ReloadLicenseFile(bool useLock)
