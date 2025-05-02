@@ -40,7 +40,7 @@ PassthroughFbImpl::~PassthroughFbImpl()
 
 FunctionBlockTypePtr PassthroughFbImpl::CreateType()
 {
-    return FunctionBlockType(TypeID, "Passthrough", "Passes the input signal data through if license is available.");
+    return FunctionBlockType(TypeID, "Passthrough", "Passes the input signal data through if the 'passthrough' license is available.");
 }
 void PassthroughFbImpl::createInputPorts()
 {
@@ -62,11 +62,11 @@ void PassthroughFbImpl::onConnected(const InputPortPtr& port)
         {
             _isLicenseCheckedOut = true;
             setComponentStatus(ComponentStatus::Ok);
-            _logger->info("License successfully checked out.");
+            _logger->info("onConnected: Successfully checked out '{}' license.", strRequiredLicense);
         }
         else
         {
-            _logger->warn("Required license could not be checked out!");
+            _logger->warn("onConnected: Failed to check out required '{}' license!", strRequiredLicense);
             setComponentStatusWithMessage(ComponentStatus::Warning, "Required license is missing!");
         }
     }
@@ -78,19 +78,17 @@ void PassthroughFbImpl::onDisconnected(const InputPortPtr& port)
         if (OPENDAQ_SUCCEEDED(_licenseComponent->checkIn(strRequiredLicense, 1)))
         {
             _isLicenseCheckedOut = false;
-            _logger->info("License successfully checked in.");
+            _logger->info("onDisconnected: Successfully check in '{}' license.", strRequiredLicense);
         }
         else
         {
-            _logger->error("The previously checked out license could not be checked in again!");
+            _logger->error("onDisconnected: Failed to check in '{}' license.", strRequiredLicense);
         }
     }
 }
 
 void PassthroughFbImpl::onPacketReceived(const InputPortPtr& port)
 {
-    assert(_inputPort == port);
-
     const auto connection = port.getConnection();
     if (!connection.assigned())
         return;
@@ -133,12 +131,12 @@ void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
             return;
         }
 
-        _inputDataDescriptor = packet.getParameters().get(event_packet_param::DATA_DESCRIPTOR);
-        _inputDomainDataDescriptor = packet.getParameters().get(event_packet_param::DOMAIN_DATA_DESCRIPTOR);
+        const DataDescriptorPtr inputDataDescriptor = packet.getParameters().get(event_packet_param::DATA_DESCRIPTOR);
+        const DataDescriptorPtr inputDomainDataDescriptor = packet.getParameters().get(event_packet_param::DOMAIN_DATA_DESCRIPTOR);
 
         const auto nullDataDescriptor = NullDataDescriptor();
 
-        if (!_inputDataDescriptor.assigned() || _inputDataDescriptor == nullDataDescriptor)
+        if (!inputDataDescriptor.assigned() || inputDataDescriptor == nullDataDescriptor)
         {
             _logger->error("processEventPacket: Input data descriptor is null!");
             setComponentStatusWithMessage(ComponentStatus::Error, "Failed to set descriptor for output signal: Input data descriptor is null!");
@@ -146,7 +144,7 @@ void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
             return;
         }
 
-        if (!_inputDomainDataDescriptor.assigned() || _inputDomainDataDescriptor == nullDataDescriptor)
+        if (!inputDomainDataDescriptor.assigned() || inputDomainDataDescriptor == nullDataDescriptor)
         {
             _logger->error("processEventPacket: Input domain data descriptor is null!");
             setComponentStatusWithMessage(ComponentStatus::Error, "Failed to set descriptor for output signal: Input domain data descriptor is null!");
@@ -154,10 +152,10 @@ void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
             return;
         }
 
-        const auto inputSampleType = _inputDataDescriptor.getSampleType();
-        const auto inputRange = _inputDataDescriptor.getValueRange();
-        const auto inputName = _inputDataDescriptor.getName();
-        const auto inputUnit = _inputDataDescriptor.getUnit();
+        const auto inputSampleType = inputDataDescriptor.getSampleType();
+        const auto inputRange = inputDataDescriptor.getValueRange();
+        const auto inputName = inputDataDescriptor.getName();
+        const auto inputUnit = inputDataDescriptor.getUnit();
 
         auto outputDataDescriptorBuilder = DataDescriptorBuilder()
             .setSampleType(inputSampleType)
@@ -168,7 +166,7 @@ void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
         const auto outputDataDescriptor = outputDataDescriptorBuilder.build();
 
         _outputSignal.setDescriptor(outputDataDescriptor);
-        _outputDomainSignal.setDescriptor(_inputDomainDataDescriptor);
+        _outputDomainSignal.setDescriptor(inputDomainDataDescriptor);
 
         setComponentStatus(ComponentStatus::Ok);
     }

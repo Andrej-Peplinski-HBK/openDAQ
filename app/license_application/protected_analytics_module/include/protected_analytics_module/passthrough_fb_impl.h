@@ -39,8 +39,6 @@ private:
     daq::modules::license_library::ILicenseChecker* _licenseComponent;
     bool _isLicenseCheckedOut;
     InputPortPtr _inputPort;
-    DataDescriptorPtr _inputDataDescriptor;
-    DataDescriptorPtr _inputDomainDataDescriptor;
     SignalConfigPtr _outputSignal;
     SignalConfigPtr _outputDomainSignal;
 };

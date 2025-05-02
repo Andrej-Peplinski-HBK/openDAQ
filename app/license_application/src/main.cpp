@@ -211,7 +211,7 @@ int main(int argc, const char* argv[])
 
     const auto packetRamp = DataPacketWithDomain(packetTime, signalRamp.getDescriptor(), noOfSamples);
     auto voltageData = static_cast<float*>(packetRamp.getRawData());
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < noOfSamples; i++)
         *voltageData++ = static_cast<float>(i);
 
     const auto reader = StreamReaderBuilder()

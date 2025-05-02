@@ -17,7 +17,7 @@
 using namespace daq::modules::protected_analytics_module;
 using namespace daq::modules::license_library;
 
-std::shared_ptr<spdlog::logger> _logger = spdlog::stdout_color_mt("LicenseChecker");
+std::shared_ptr<spdlog::logger> _logger = spdlog::stdout_color_mt("LicenseCheckerModule");
 std::mutex mtx;
 uint8_t expected_license_hashBuffer[32] = {0};
 boost::dll::shared_library licenseCheckerLibrary;
@@ -84,10 +84,13 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 
     const auto programLocation = boost::dll::program_location();
     const auto exeParentDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
-    const auto fullLicPath =
-        exeParentDir /
-        "LicenseLibrary-64-3-signed.dll";  // Please note that under linux the module is called "libLicenseLibrary-64-3-debug.so" - which
-                                           // means that we subsequently fail to load this license library...
+#ifdef WIN32
+    const moduleSimpleName = "LicenseLibrary-64-3-signed.dll";
+#else
+    const auto moduleSimpleName = "libLicenseLibrary-64-3-signed.so";
+#endif
+    const auto fullLicPath = exeParentDir / moduleSimpleName;
+        
 
     licenseCheckerPtr = nullptr;
 

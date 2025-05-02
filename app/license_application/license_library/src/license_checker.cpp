@@ -3,6 +3,7 @@
 #include <mutex>
 #include <regex>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <boost/dll/runtime_symbol_info.hpp>
 
 BEGIN_NAMESPACE_LICENSE_LIBRARY
 
@@ -208,15 +209,9 @@ const std::string getLicenseFilePath()
     if (envPath != nullptr && std::strlen(envPath) > 0)
         return envPath;
 
-#ifdef WIN32
-    return "C:/temp/license.lic";
-#else
-    return "~/license.lic";
-#endif
-
     // Alternatively, consider using relative path to executable...
-    // boost::filesystem::path execPath = boost::dll::program_location().parent_path();
-    // return execPath.string() + "/license.lic";
+    const auto execPath = boost::dll::program_location().parent_path();
+    return execPath.string() + "/license.lic";
 }
 
 void LicenseChecker::ReloadLicenseFile(bool useLock)
@@ -250,8 +245,13 @@ void LicenseChecker::ReloadLicenseFile(bool useLock)
     std::string line;
 
     // Read each line
+    auto lineNumber = 0;
     while (std::getline(file, line))
     {
+        ++lineNumber;
+        if (line.empty() || line[0] == '#')
+            continue;  // Skip empty lines and comments
+
         std::smatch match;
         if (std::regex_match(line, match, lineRegex))
         {
@@ -264,11 +264,7 @@ void LicenseChecker::ReloadLicenseFile(bool useLock)
         }
         else
         {
-            // Log or handle invalid lines
-            if (_logger)
-            {
-                _logger->warn("Invalid line in license file: {}", line);
-            }
+            _logger->warn("Unexpected line #{} in license file: {}", lineNumber, line);
         }
     }
 
