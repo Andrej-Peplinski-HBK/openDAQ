@@ -27,6 +27,12 @@ target_compile_definitions(${APP_NAME}
         BOOST_DLL_USE_STD_FS
         BOOST_ALL_NO_LIB
 )
+if (MSVC)
+    target_compile_options(${APP_NAME} 
+        PRIVATE            
+            /ZI         #Enable Hot Reload per default (see: ) https://learn.microsoft.com/en-us/visualstudio/debugger/edit-and-continue-visual-cpp?view=vs-2022#BKMK_Enable_or_disable_automatic_invocation_of_Edit_and_Continue
+    )
+endif()
 
 target_link_libraries(${APP_NAME} 
     PRIVATE 
