@@ -12,14 +12,17 @@ using namespace daq;
 void printHelp()
 {
     std::cout << "Usage: " << std::endl;
-    std::cout << "  -hash <hash>" << std::endl << std::endl;
-    std::cout << "Example:" << std::endl;
-    std::cout << "  -hash E01D211BD6CF2F2C4BA8DCDABBA929D0FD8D5457" << std::endl << std::endl;
-    std::cout << "Please note that: " << std::endl;
-    std::cout << "  a.) On Windows you can determine the hash by taking the first hit of:" << std::endl;
-    std::cout << "    >> signtool verify /pa /v ${license_library} | findstr \"SHA1\"" << std::endl;
-    std::cout << "  b.) When running in the Visual Studio debugger you can specify the command line the project debug settings... "
-              << std::endl;
+    std::cout << "  In order to run this demo application you will need to specify the hash of signing certificate used to sign the 'LicenseLibrary'." << std::endl;
+    std::cout << "  On x64 Windows you will find the hash in the build output as the signing will be done automatically for you." << std::endl;
+    std::cout << "  You can specify the hash either using an ENV variable:" << std::endl;
+    std::cout << "    E.g.: set DEBUG_SET_LICENSE_MODULE_HASH=3012B9EE811245DB18F81074E7805A9165D00265" << std::endl << std::endl;
+    std::cout << "  Or you can use the command line argument:" << std::endl << std::endl;
+    std::cout << "    E.g.: license_application.exe -hash 3012B9EE811245DB18F81074E7805A9165D00265" << std::endl << std::endl;
+    std::cout << "Please also note that: " << std::endl;
+    std::cout << "  a.) You can optionally override to OpenDAQ module directory (CWD) with an ENV variable:" << std::endl;
+    std::cout << "    >> set OPENDAQ_MODULES_PATH=%Your_Path%" << std::endl;
+    std::cout << "  b.) On Windows you can determine the hash manually by taking the first hit of:" << std::endl;
+    std::cout << "    >> signtool verify /pa /v ${license_library} | findstr \"SHA1\"" << std::endl;    
 }
 
 boost::filesystem::path getProtectedAnalyticsModulePath()
@@ -88,8 +91,11 @@ boost::filesystem::path getProtectedAnalyticsModulePath()
 }
 int main(int argc, const char* argv[])
 {
-#pragma region Prime the test application by injecting the expected license hash into protected_analytics_module
-    boost::dll::shared_library moduleProtectedAnalyticsModule;
+    boost::dll::shared_library moduleProtectedAnalyticsModule;  //Define top-level object to ensure that the license library does not get unloaded after potentially having it loaded to set the license hash externally.
+
+    // Check for the user-supplied license hash
+    std::string hash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+    if (hash.empty())
     {
         std::vector<uint8_t> expected_license_hashBuffer;
         for (auto i = 1; i < argc; ++i)
@@ -98,7 +104,7 @@ int main(int argc, const char* argv[])
             {
                 if (i + 1 < argc)
                 {
-                    const std::string hash = argv[i + 1];
+                    hash = argv[i + 1];
                     expected_license_hashBuffer = std::vector<uint8_t>(hash.size() / 2);
                     for (size_t j = 0; j < hash.size(); j += 2)
                     {
@@ -151,9 +157,8 @@ int main(int argc, const char* argv[])
 
         moduleProtectedAnalyticsModule = std::move(moduleLibrary);  // Keep the module loaded until the end of the program
     }
-#pragma endregion
 
-    // Create an instance pointer that does NOT load any modules (see: https://opendaq.github.io/opendaq/dev/knowledge_base/modules.html)
+    // ToDo: Create an instance pointer that does NOT load any modules (see: https://opendaq.github.io/opendaq/dev/knowledge_base/modules.html)
     const InstancePtr instance = Instance("");  //"[[none]]"
 
     // Verify that after start up our modules are loaded
@@ -171,7 +176,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ModulePtr protectedAnalyticsModulePtr = *itFound;    
+    ModulePtr protectedAnalyticsModulePtr = *itFound;
 
     const auto fbTypeID = "ProtectedAnalyticsModulePassthrough";  // daq::modules::protected_analytics_module::function_block::PassthroughFbImpl::TypeID;
     const auto fb = protectedAnalyticsModulePtr.createFunctionBlock(fbTypeID, nullptr, "id");
@@ -244,6 +249,9 @@ int main(int argc, const char* argv[])
                   << std::endl;
         return -1;
     }
+
+    std::cout << "Press any key to continue..." << std::endl;
+    std::cin.get();
 
     return 0;
 }

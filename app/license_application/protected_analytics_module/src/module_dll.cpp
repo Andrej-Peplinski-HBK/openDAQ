@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <mutex>
 
@@ -19,7 +20,10 @@ using namespace daq::modules::license_library;
 
 std::shared_ptr<spdlog::logger> _logger = spdlog::stdout_color_mt("LicenseCheckerModule");
 std::mutex mtx;
+char moduleFilePath[260] = {0};
+constexpr const auto MAX_MODULE_FILE_PATH = sizeof(moduleFilePath) / sizeof(moduleFilePath[0]);
 uint8_t expected_license_hashBuffer[32] = {0};
+constexpr const auto MAX_HASH_SIZE = sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]);
 boost::dll::shared_library licenseCheckerLibrary;
 daq::ObjectPtr<ILicenseChecker> licenseCheckerPtr;
 
@@ -27,12 +31,14 @@ daq::ObjectPtr<ILicenseChecker> licenseCheckerPtr;
 
 #include <wtypes.h>
 
-BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserved*/)
+BOOL WINAPI DllMain(HINSTANCE hinstance, DWORD fdwReason, LPVOID /*lpvReserved*/)
 {
     switch (fdwReason)
     {
-        // case DLL_PROCESS_ATTACH:
-        //     break;
+        case DLL_PROCESS_ATTACH:
+            GetModuleFileNameA(hinstance, moduleFilePath, MAX_MODULE_FILE_PATH);
+            //OutputDebugStringA(fmt::format("DllMain: {}", moduleFilePath).c_str());
+            break;
         case DLL_PROCESS_DETACH:
             licenseCheckerPtr = nullptr;
             licenseCheckerLibrary.unload();
@@ -41,12 +47,23 @@ BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserv
     return TRUE;
 }
 #else
+
+#include <dlfcn.h>
 // See:
 //  * https://www.opengate.at/blog/2020/03/dllmain/
 //  * https://codeberg.org/GateNetwork/gate-blog-classroom/src/branch/main/c_cpp/dllmain_linux/
 void __attribute__((constructor)) SO_init()
 {
     /* do some global initialization */
+    Dl_info info;
+    if (dladdr(handle, &info))
+    {
+        std::cout << "DLL loaded from: " << info.dli_fname << std::endl;
+    }
+    else
+    {
+        std::cerr << "Failed to retrieve DLL path." << std::endl;
+    }
 }
 
 void __attribute__((destructor)) SO_uninit()
@@ -58,7 +75,6 @@ void __attribute__((destructor)) SO_uninit()
 
 OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, uint8_t* hashBuffer)
 {
-    constexpr const auto MAX_HASH_SIZE = sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]);
     if (hashSize > MAX_HASH_SIZE)
     {
         _logger->error("Hash size is too large!");
@@ -71,10 +87,11 @@ OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, 
     std::memset(expected_license_hashBuffer, 0, sizeof(expected_license_hashBuffer));
     std::memcpy(expected_license_hashBuffer, hashBuffer, hashSize * sizeof(hashBuffer[0]));
 
-    _logger->info("Successfully initialized the hash externally.");
-    _logger->info("This just happens in this demo application to allow users to");
-    _logger->info("provide their own hash key stemming from a custom certificate.");
-    _logger->info("In a real application one would 'embed' the hash key into the application though...");
+    _logger->info(R"(Successfully initialized the hash externally.
+                    This just happens in this demo application to allow users to
+                    provide their own hash key stemming from a custom certificate.
+                    In a real application one would 'embed' the hash key into the application though...
+        )");
 
     return OPENDAQ_SUCCESS;
 }
@@ -82,15 +99,26 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 {
     std::lock_guard<std::mutex> lock(mtx);
 
-    const auto programLocation = boost::dll::program_location();
-    const auto exeParentDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
+    boost::filesystem::path licenceDir;
+    const auto isModuleFilePathUninitialized = std::all_of(std::cbegin(moduleFilePath), std::cend(moduleFilePath), [](auto b) { return b == 0; });
+    if (!isModuleFilePathUninitialized)
+    {
+        licenceDir = boost::filesystem::absolute(moduleFilePath).parent_path();
+        //OutputDebugStringA(fmt::format("checkDependencies: Using moduleFilePath {}", licenceDir.string()).c_str());
+    }
+    else
+    {
+        const auto programLocation = boost::dll::program_location();
+        licenceDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
+        //OutputDebugStringA(fmt::format("checkDependencies: Using exe path {}", licenceDir.string()).c_str());
+    }
+    
 #ifdef WIN32
     const auto moduleSimpleName = "LicenseLibrary-64-3-signed.dll";
 #else
     const auto moduleSimpleName = "libLicenseLibrary-64-3-signed.so";
 #endif
-    const auto fullLicPath = exeParentDir / moduleSimpleName;
-        
+    const auto fullLicPath = licenceDir / moduleSimpleName;
 
     licenseCheckerPtr = nullptr;
 
@@ -98,6 +126,8 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     licenseCheckerLibrary = boost::dll::shared_library(fullLicPath.c_str(), errorCode);
     if (errorCode)
     {
+        //OutputDebugStringA(fmt::format("checkDependencies: Failed to load '{}' (details: '{}')!", fullLicPath.string(), errorCode.message()).c_str());
+        //_logger->error("checkDependencies: Failed to load '{}' (details: '{}')!", fullLicPath.string(), errorCode.message());
         *errMsg = daq::String(fmt::format("Failed to load '{0}' (details: '{1}', code: {2}, category: {3})!",
                                           fullLicPath.string(),
                                           errorCode.message(),
@@ -107,7 +137,39 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
         return OPENDAQ_ERR_RESOLVEFAILED;  // 👈 Here it would be beneficial to have a more specific error code for a Missing License file
     }
 
-    // Check digital signature
+#pragma region Check digital signature
+    // Check if the 'expected_license_hashBuffer' has already been set or else fall back to environment variable
+    const auto isLicenseBufferUninitialized = std::all_of(std::cbegin(expected_license_hashBuffer), std::cend(expected_license_hashBuffer), [](auto b) { return b == 0; });
+    if (isLicenseBufferUninitialized)
+    {
+        // $env:DEBUG_SET_LICENSE_MODULE_HASH = "3012B9EE811245DB18F81074E7805A9165D00265"
+        const std::string hash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+        if (!hash.empty())
+        {
+            const auto hashVectorSize = hash.size() / 2;
+            if (hashVectorSize <= MAX_HASH_SIZE)
+            {
+                for (size_t j = 0; j < hash.size(); j += 2)
+                {
+                    const auto hashValue = static_cast<uint8_t>(std::stoi(hash.substr(j, 2), nullptr, 16));
+                    if (hashValue == 0)
+                    {
+                        _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) must not contain 0s!", hash);
+                        return OPENDAQ_ERR_INVALIDVALUE;
+                    }
+
+                    expected_license_hashBuffer[j / 2] = hashValue;
+                }
+
+                _logger->info("checkDependencies: Successfully set hash through environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({})", hash);
+            }
+            else
+            {
+                _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) is too long!", hash);
+            }
+        }
+    }
+
     auto pLastHashValue = &expected_license_hashBuffer[sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]) - 1];
     while (*pLastHashValue == 0)
     {
@@ -119,6 +181,7 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     auto retVal = CanTrustLicenseModule(licenseCheckerLibrary.location(), vecExpected_license_hashBuffer, errMsg);
     if (OPENDAQ_FAILED(retVal))
         return retVal;
+#pragma endregion
 
     // Try create the license component (now that we are sure that the module is valid)
     {
