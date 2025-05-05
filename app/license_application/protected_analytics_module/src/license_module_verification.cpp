@@ -182,6 +182,22 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
     daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8_t>& expected_license_hashBuffer, daq::IString** errMsg)
     {
         std::cerr << "The verification of the license module has not been implemented!!!" << std::endl;
+        
+        //Use cmake commands to sign the file
+        // openssl genpkey -algorithm RSA -out private_key.pem        
+        // openssl rsa -pubout -in private_key.pem -out public_key.pem
+        // openssl dgst -sha256 -sign private_key.pem -out tmplibLicenseLibrary.signature libLicenseLibrary-64-3-signed.so
+        // objcopy --add-section .signature=tmplibLicenseLibrary.signature --set-section-flags .signature=noload,readonly libLicenseLibrary-64-3-signed.so libLicenseLibrary-64-3-signed.so
+
+        //Manually verify the signature on the commandline
+        // objcopy --dump-section .signature=extracted_sig.bin libLicenseLibrary-64-3-signed.so
+        // openssl dgst -sha256 -verify public_key.pem -signature extracted_sig.bin libLicenseLibrary-64-3-debug.so //Here we must use the library without the extra section!!!
+
+        // Load the public key
+        //     FILE* pub_key_file = fopen(public_key_path, "r");
+        //     RSA* rsa_pub_key = PEM_read_RSA_PUBKEY(pub_key_file, NULL, NULL, NULL);
+        //     fclose(pub_key_file);
+
         return  OPENDAQ_SUCCESS;    //... just to get the compilation going ...
     }
 #endif  // WIN32

@@ -56,12 +56,8 @@ where `protected_analytics_module` contains the functionality that we want to pr
 
 6. Create a demo license
 
-    Create simple text file `license.lic` and save it under:
-
-    * Windows: <em>C:\temp\license.lic</em>
-    * Linux: <em>~/license.lic</em>
     
-    Use this file to experiment with the behaviour of the application depending on which licenses are available.
+    Use the `license.lic` file to experiment with the behaviour of the application depending on which licenses are available (Please note that this file will be copied to the output directory as part of the post build event).
     
     The format of the file is:
     ```

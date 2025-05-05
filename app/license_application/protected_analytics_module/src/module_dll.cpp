@@ -54,15 +54,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstance, DWORD fdwReason, LPVOID /*lpvReserved*/
 //  * https://codeberg.org/GateNetwork/gate-blog-classroom/src/branch/main/c_cpp/dllmain_linux/
 void __attribute__((constructor)) SO_init()
 {
-    /* do some global initialization */
+    // Determine the path to the shared library
     Dl_info info;
-    if (dladdr(handle, &info))
+    if (dladdr((void*)&SO_init, &info))
     {
-        std::cout << "DLL loaded from: " << info.dli_fname << std::endl;
+        std::cout << "Protected Analytics Module loaded from: " << info.dli_fname << std::endl;
+        strncpy(moduleFilePath, info.dli_fname, MAX_MODULE_FILE_PATH - 1);
     }
     else
     {
-        std::cerr << "Failed to retrieve DLL path." << std::endl;
+        std::cerr << "Failed to retrieve module path: " << dlerror() << std::endl;
     }
 }
 

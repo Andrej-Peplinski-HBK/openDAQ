@@ -94,7 +94,8 @@ int main(int argc, const char* argv[])
     boost::dll::shared_library moduleProtectedAnalyticsModule;  //Define top-level object to ensure that the license library does not get unloaded after potentially having it loaded to set the license hash externally.
 
     // Check for the user-supplied license hash
-    std::string hash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+    const auto envLicenseHash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+    std::string hash = envLicenseHash ? envLicenseHash : "";
     if (hash.empty())
     {
         std::vector<uint8_t> expected_license_hashBuffer;
