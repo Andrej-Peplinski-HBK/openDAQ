@@ -144,7 +144,8 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     if (isLicenseBufferUninitialized)
     {
         // $env:DEBUG_SET_LICENSE_MODULE_HASH = "3012B9EE811245DB18F81074E7805A9165D00265"
-        const std::string hash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+        const auto envLicenseHash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
+        std::string hash = envLicenseHash ? envLicenseHash : "";
         if (!hash.empty())
         {
             const auto hashVectorSize = hash.size() / 2;
