@@ -80,7 +80,7 @@ if(BUILD_64Bit)     #Required check as "64" is part of the file name...
         #Please note that depending on the build configuration the output file name may or maynot contain "debug". There, we must use the wildcard copying approach...
         string(REPLACE "/" "\\" OUTPUT_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/$(Configuration)")
 
-        set(FULL_MODULE_OUTPUT_PATH "${OUTPUT_DIR}\\${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}*${OPENDAQ_MODULE_SUFFIX}")
+        #set(FULL_MODULE_OUTPUT_PATH "${OUTPUT_DIR}\\${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}*${OPENDAQ_MODULE_SUFFIX}")
         set(FULL_MODULE_SIGNED_PATH "${OUTPUT_DIR}\\${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-signed${OPENDAQ_MODULE_SUFFIX}")
 
         set(FULL_CERT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../certs/Selfsigned-CA.pfx")
@@ -95,18 +95,21 @@ if(BUILD_64Bit)     #Required check as "64" is part of the file name...
             # In oder to suppress this prompt, we use the "echo F |" command before the xcopy command. This approach might
             # fail depending on the operating system (e.g. "File" in German is "Datei").
             # (Also see: https://stackoverflow.com/questions/3018289/xcopy-file-rename-suppress-does-xxx-specify-a-file-name-message)
-            COMMAND (echo F | xcopy /Y ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH}) | echo "Done copying ..."
-            #COMMAND ${CMAKE_COMMAND} -E copy ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH} <- does not work!
+            COMMAND (echo F | xcopy /Y $<TARGET_FILE:${LIB_NAME}> ${FULL_MODULE_SIGNED_PATH}) | echo "Done copying ..."
+            #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${LIB_NAME}> ${FULL_MODULE_SIGNED_PATH} <- does not work!
             COMMAND ${CMAKE_COMMAND} -E echo "Start signing ${FULL_MODULE_SIGNED_PATH} with ${FULL_CERT_PATH}... "
             COMMAND signtool sign /v /n "Test Certificate Authority (CA)" /f ${FULL_CERT_PATH} /p Passw0rd123 /fd SHA256 /t http://timestamp.digicert.com ${FULL_MODULE_SIGNED_PATH}
         )
     elseif(LINUX)
-        set(FULL_MODULE_OUTPUT_PATH "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/lib${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-debug${OPENDAQ_MODULE_SUFFIX}")
-        set(FULL_MODULE_SIGNED_PATH "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/lib${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-signed${OPENDAQ_MODULE_SUFFIX}")
+        #See: "function(opendaq_set_output_lib_name" in cmake/openDAQUtils.cmake)
+        #CMAKE_DEBUG_POSTFIX -> "-debug"
+        #CMAKE_SHARED_MODULE_PREFIX -> "lib"
+        #set(FULL_MODULE_OUTPUT_PATH "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${CMAKE_SHARED_MODULE_PREFIX}${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-debug${OPENDAQ_MODULE_SUFFIX}")
+        set(FULL_MODULE_SIGNED_PATH "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${CMAKE_SHARED_MODULE_PREFIX}${LIB_NAME}-64-${PROJECT_VERSION_MAJOR}-signed${OPENDAQ_MODULE_SUFFIX}")
 
         add_custom_command(TARGET ${LIB_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LICENSE_FILE} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-            COMMAND ${CMAKE_COMMAND} -E copy ${FULL_MODULE_OUTPUT_PATH} ${FULL_MODULE_SIGNED_PATH}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LICENSE_FILE} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${LIB_NAME}> ${FULL_MODULE_SIGNED_PATH}
         )
     else()
         message(STATUS "Automatic signing as part of the build script has only been implemented for 64bit Windows|Linux platforms!")
