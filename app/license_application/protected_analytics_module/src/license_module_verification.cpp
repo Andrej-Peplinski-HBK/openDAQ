@@ -43,7 +43,7 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
         return OPENDAQ_ERR_VALIDATE_FAILED;
     }
     
-    WINTRUST_DATA wd = {0};
+    WINTRUST_DATA wd = {};
     wd.cbStruct = sizeof(WINTRUST_DATA);
     wd.dwUIChoice = WTD_UI_NONE;
     wd.dwStateAction = WTD_STATEACTION_VERIFY;
@@ -51,7 +51,7 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
     wd.dwProvFlags = WTD_CACHE_ONLY_URL_RETRIEVAL;
     wd.dwUnionChoice = WTD_CHOICE_FILE;
 
-    WINTRUST_FILE_INFO wfi = {0};
+    WINTRUST_FILE_INFO wfi = {};
     wd.pFile = &wfi;
 
     wfi.cbStruct = sizeof(WINTRUST_FILE_INFO);
@@ -71,7 +71,7 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
      && trustResultCode != CERT_E_EXPIRED)          // Accept expired certificates for this demo...
     {
         const auto win32ErrCode = GetLastError();
-        std::cerr << "⚠️⚠️⚠️ The user is most likely trying to a use a compromised license dll ⚠️⚠️⚠️! (Return code: " << std::hex << win32ErrCode << std::dec << ")" << std::endl;
+        std::cerr << "¡¡¡ The user is most likely trying to a use a compromised license dll !!! (Return code: " << std::hex << win32ErrCode << std::dec << ")" << std::endl;
 
         return OPENDAQ_ERR_INVALID_OPERATION;
     }

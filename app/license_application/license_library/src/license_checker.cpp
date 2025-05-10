@@ -284,6 +284,18 @@ void LicenseChecker::ReloadLicenseFile(bool useLock)
             }
         }
     }
+
+    if (!_featureTokensOverall.empty())
+    {
+        _logger->info("Successfully updated {} licenses (checked out: {}) from {}",
+                      _featureTokensOverall.size(),
+                      _featureTokensCheckedOut.size(),
+                      licFilePath);
+    }
+    else
+    {
+        _logger->warn("No licenses found in file: {}", licFilePath);
+    }
 }
 
 END_NAMESPACE_LICENSE_LIBRARY

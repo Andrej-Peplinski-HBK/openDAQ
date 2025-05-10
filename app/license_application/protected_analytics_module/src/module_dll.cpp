@@ -98,6 +98,10 @@ OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, 
 }
 OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 {
+    // Avoid double initialization of the license module
+    if (licenseCheckerPtr != nullptr)
+        return OPENDAQ_SUCCESS;
+
     std::lock_guard<std::mutex> lock(mtx);
 
     boost::filesystem::path licenceDir;
