@@ -1,8 +1,8 @@
 #include <license_library/module_dll.h>
 
 // Reference counter for all objects that reside inside this module and that is used to
-// verify that no clients hold dangling when the module unloads (remark: This is a similar approach to the one being used in ATL/COM - see: http://diranieh.com/ATLCOM/Architecture.htm)
-std::atomic<int> moduleOverallObjectRefCounter; //Similar to: extern std::atomic<std::size_t> daqSharedLibObjectCount;
+// verify that no clients hold dangling pointers when the module unloads (remark: This is a similar approach to the one being used in ATL/COM - see: http://diranieh.com/ATLCOM/Architecture.htm)
+std::atomic<int> moduleOverallObjectRefCounter;
 
 #ifdef WIN32
 
@@ -49,10 +49,6 @@ OPENDAQ_MODULE_API daq::ErrCode createLicenseChecker(ILicenseChecker** licenseCh
     *licenseChecker = ptrRetVal;
     return OPENDAQ_SUCCESS;
 }
-
-
-
-
 
 
 #ifdef OPENDAQ_TRACK_SHARED_LIB_OBJECT_COUNT

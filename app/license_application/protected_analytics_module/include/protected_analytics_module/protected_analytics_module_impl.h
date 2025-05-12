@@ -6,7 +6,10 @@
 
 BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
 
-
+/*!
+ * @brief Entry class to the Protected Analytics Module, which gives access to the
+ *        one and only @ref PassthroughFbImpl function block type.
+ */
 class ProtectedAnalyticsModule final : public Module
 {
 public:

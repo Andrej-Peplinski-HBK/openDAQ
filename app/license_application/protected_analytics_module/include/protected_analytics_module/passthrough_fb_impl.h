@@ -11,6 +11,23 @@ BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
 namespace function_block
 {
 
+/**
+ * @class PassthroughFbImpl
+ * @brief A final implementation of the FunctionBlock class that acts as a passthrough module
+ *        with integrated license checking functionality.
+ *
+ * This class is responsible for managing input ports, signals, and processing packets
+ * while ensuring that the required license is checked out. It is part of the 
+ * Protected Analytics Module and provides functionality to handle event and data packets.
+ *
+ * @note This class cannot be inherited from as it is marked `final`.
+ *
+ * @details
+ * - The class provides static methods for type creation and identification.
+ * - It overrides specific methods from the base FunctionBlock class to handle
+ *   connection, disconnection, and packet reception events.
+ * - It integrates with the license library to ensure proper licensing.
+ */
 class PassthroughFbImpl final : public FunctionBlock
 {
 public:
