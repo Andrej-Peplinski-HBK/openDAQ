@@ -26,13 +26,13 @@ BOOL WINAPI DllMain(HINSTANCE /*hinstance*/, DWORD fdwReason, LPVOID /*lpvReserv
 void __attribute__((constructor)) SO_init()
 {
   /* do some global initialization */
-  printf("LicenseLibrary: SO_init\n");
+  //printf("LicenseLibrary: SO_init\n");
 }
 
 void __attribute__((destructor)) SO_uninit()
 {
   /* do some global cleanup */
-  printf("LicenseLibrary: SO_uninit\n");
+  //printf("LicenseLibrary: SO_uninit\n");
 }
 
 #endif
@@ -57,10 +57,4 @@ OPENDAQ_MODULE_API daq::ErrCode createLicenseChecker(ILicenseChecker** licenseCh
 
 #ifdef OPENDAQ_TRACK_SHARED_LIB_OBJECT_COUNT
 std::atomic<std::size_t> daq::daqSharedLibObjectCount(0);  // Required otherwise we get a linker error ?? LNK2001: unresolved symbol "struct std::atomic<unsigned __int64> daq::daqSharedLibObjectCount"
-
-//  OPENDAQ_MODULE_API daq::ErrCode daqGetObjectCount(daq::SizeT* count)
-// {
-//      *count = daq::daqSharedLibObjectCount;
-//      return OPENDAQ_SUCCESS;
-//  }
 #endif

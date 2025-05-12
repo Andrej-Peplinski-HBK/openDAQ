@@ -227,7 +227,7 @@ int main(int argc, const char* argv[])
     std::vector<float> data(noOfSamples);
     std::vector<int64_t> time(noOfSamples);
 
-    int retVal = -1;
+    auto retVal = -1;
     SizeT noOfSamplesRead = noOfSamples;
     const auto readerStatus = reader.readWithDomain(data.data(), time.data(), &noOfSamplesRead);
     //Check if we can read the data (otherwise, we might have had a license problem)...
@@ -273,11 +273,10 @@ int main(int argc, const char* argv[])
             << readerStatusStr << ", status of pass-through function block: "
             << fbStatus << ")"
             << Reset << std::endl;
-        return -1;
     }
 
     std::cout << "Press any key to continue..." << std::endl;
     std::cin.get();
 
-    return 0;
+    return retVal;
 }
