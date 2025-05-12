@@ -37,7 +37,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstance, DWORD fdwReason, LPVOID /*lpvReserved*/
     {
         case DLL_PROCESS_ATTACH:
             GetModuleFileNameA(hinstance, moduleFilePath, MAX_MODULE_FILE_PATH);
-            //OutputDebugStringA(fmt::format("DllMain: {}", moduleFilePath).c_str());
             break;
         case DLL_PROCESS_DETACH:
             licenseCheckerPtr = nullptr;
@@ -78,8 +77,8 @@ OPENDAQ_MODULE_API daq::ErrCode demoOnlySetLicenseHash(const uint32_t hashSize, 
 {
     if (hashSize > MAX_HASH_SIZE)
     {
-        _logger->error("Hash size is too large!");
-        return OPENDAQ_ERR_INVALID_ARGUMENT;
+        _logger->error("Hash size is too long!");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALID_ARGUMENT, "Hash size is too long!");
     }
 
     std::lock_guard<std::mutex> lock(mtx);
@@ -104,18 +103,19 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    boost::filesystem::path licenceDir;
+    //Determine the file path to the license checker library
+    boost::filesystem::path licenseCheckerDir;
     const auto isModuleFilePathUninitialized = std::all_of(std::cbegin(moduleFilePath), std::cend(moduleFilePath), [](auto b) { return b == 0; });
     if (!isModuleFilePathUninitialized)
     {
-        licenceDir = boost::filesystem::absolute(moduleFilePath).parent_path();
-        //OutputDebugStringA(fmt::format("checkDependencies: Using moduleFilePath {}", licenceDir.string()).c_str());
+        licenseCheckerDir = boost::filesystem::absolute(moduleFilePath).parent_path();
+        _logger->debug("checkDependencies: Using moduleFilePath {}", licenseCheckerDir.string());
     }
     else
     {
         const auto programLocation = boost::dll::program_location();
-        licenceDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
-        //OutputDebugStringA(fmt::format("checkDependencies: Using exe path {}", licenceDir.string()).c_str());
+        licenseCheckerDir = boost::filesystem::absolute(programLocation.c_str()).parent_path();
+        _logger->debug("checkDependencies: Using exe path {}", licenseCheckerDir.string());
     }
     
 #ifdef WIN32
@@ -123,23 +123,21 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 #else
     const auto moduleSimpleName = "libLicenseLibrary-64-3-signed.so";
 #endif
-    const auto fullLicPath = licenceDir / moduleSimpleName;
+    const auto licenseCheckerFullPath = licenseCheckerDir / moduleSimpleName;
 
     licenseCheckerPtr = nullptr;
 
     std::error_code errorCode;
-    licenseCheckerLibrary = boost::dll::shared_library(fullLicPath.c_str(), errorCode);
+    licenseCheckerLibrary = boost::dll::shared_library(licenseCheckerFullPath.c_str(), errorCode);
     if (errorCode)
     {
-        //OutputDebugStringA(fmt::format("checkDependencies: Failed to load '{}' (details: '{}')!", fullLicPath.string(), errorCode.message()).c_str());
-        //_logger->error("checkDependencies: Failed to load '{}' (details: '{}')!", fullLicPath.string(), errorCode.message());
-        *errMsg = daq::String(fmt::format("Failed to load '{0}' (details: '{1}', code: {2}, category: {3})!",
-                                          fullLicPath.string(),
-                                          errorCode.message(),
-                                          errorCode.value(),
-                                          errorCode.category().name()))
-                      .addRefAndReturn();
-        return OPENDAQ_ERR_RESOLVEFAILED;  // 👈 Here it would be beneficial to have a more specific error code for a Missing License file
+        auto errMsgReturn = daq::String(fmt::format("Failed to load '{0}' (details: '{1}', code: {2}, category: {3})!",
+                                                   licenseCheckerFullPath.string(),
+                                                   errorCode.message(),
+                                                   errorCode.value(),
+                                                   errorCode.category().name()));
+        *errMsg = errMsgReturn.addRefAndReturn();
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_RESOLVEFAILED, errMsgReturn);  // 👈 Here it would be beneficial to have a more specific error code for a Missing License file
     }
 
 #pragma region Check digital signature
@@ -147,33 +145,42 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
     const auto isLicenseBufferUninitialized = std::all_of(std::cbegin(expected_license_hashBuffer), std::cend(expected_license_hashBuffer), [](auto b) { return b == 0; });
     if (isLicenseBufferUninitialized)
     {
-        // $env:DEBUG_SET_LICENSE_MODULE_HASH = "3012B9EE811245DB18F81074E7805A9165D00265"
         const auto envLicenseHash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
-        std::string hash = envLicenseHash ? envLicenseHash : "";
-        if (!hash.empty())
+        if (envLicenseHash == nullptr)
         {
-            const auto hashVectorSize = hash.size() / 2;
-            if (hashVectorSize <= MAX_HASH_SIZE)
-            {
-                for (size_t j = 0; j < hash.size(); j += 2)
-                {
-                    const auto hashValue = static_cast<uint8_t>(std::stoi(hash.substr(j, 2), nullptr, 16));
-                    if (hashValue == 0)
-                    {
-                        _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) must not contain 0s!", hash);
-                        return OPENDAQ_ERR_INVALIDVALUE;
-                    }
+            _logger->error("checkDependencies: License Library has not been set through demoOnlySetLicenseHash() and environment variable 'DEBUG_SET_LICENSE_MODULE_HASH'!");
+            *errMsg = daq::String("License Library has not been set through demoOnlySetLicenseHash() nor environment variable 'DEBUG_SET_LICENSE_MODULE_HASH'!").addRefAndReturn();
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALID_OPERATION, "License Library has not been set through demoOnlySetLicenseHash() nor environment variable 'DEBUG_SET_LICENSE_MODULE_HASH'!");
+        }
 
-                    expected_license_hashBuffer[j / 2] = hashValue;
+        std::string hash(envLicenseHash);
+        
+        const auto hashVectorSize = hash.size() / 2;
+        if (hashVectorSize <= MAX_HASH_SIZE)
+        {
+            for (size_t j = 0; j < hash.size(); j += 2)
+            {
+                const auto hashValue = static_cast<uint8_t>(std::stoi(hash.substr(j, 2), nullptr, 16));
+                if (hashValue == 0)
+                {
+                    _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) must not contain 0s!", hash);
+                    *errMsg = daq::String("Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH must not contain 0s!").addRefAndReturn();
+                    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDVALUE, "Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' must not contain 0s!");
                 }
 
-                _logger->info("checkDependencies: Successfully set hash through environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({})", hash);
+                expected_license_hashBuffer[j / 2] = hashValue;
             }
-            else
-            {
-                _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) is too long!", hash);
-            }
+
+            _logger->info("checkDependencies: Successfully set hash through environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({})", hash);
         }
+        else
+        {
+            _logger->error("checkDependencies: Environment variable 'DEBUG_SET_LICENSE_MODULE_HASH' ({}) is too long!", hash);
+        }
+    }
+    else
+    {
+        _logger->debug("checkDependencies: Successfully set hash through demoOnlySetLicenseHash()");
     }
 
     auto pLastHashValue = &expected_license_hashBuffer[sizeof(expected_license_hashBuffer) / sizeof(expected_license_hashBuffer[0]) - 1];
@@ -186,7 +193,7 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 
     auto retVal = CanTrustLicenseModule(licenseCheckerLibrary.location(), vecExpected_license_hashBuffer, errMsg);
     if (OPENDAQ_FAILED(retVal))
-        return retVal;
+        return DAQ_MAKE_ERROR_INFO(retVal, "Failed to verify the digital signature of the license library");
 #pragma endregion
 
     // Try create the license component (now that we are sure that the module is valid)
@@ -195,11 +202,10 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
         if (!licenseCheckerLibrary.has(fctName))
         {
             licenseCheckerLibrary.unload();
-            *errMsg =
-                daq::String(
-                    fmt::format("License '{0}' is not a valid module (details: '{1}' export is missing)!", fullLicPath.string(), fctName))
-                    .addRefAndReturn();
-            return OPENDAQ_ERR_RESOLVEFAILED;
+
+            auto errMsgReturn = daq::String(fmt::format("License library '{0}' is not a valid module (details: '{1}' export is missing)!", licenseCheckerFullPath.string(), fctName));
+            *errMsg = errMsgReturn.addRefAndReturn();
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_RESOLVEFAILED, errMsgReturn);
         }
 
         using CreateLicenseCheckerFunc = daq::ErrCode (*)(ILicenseChecker**);
@@ -209,11 +215,10 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
         if (OPENDAQ_FAILED(retVal))
         {
             licenseCheckerLibrary.unload();
-            *errMsg =
-                daq::String(
-                    fmt::format("License '{0}' is not a valid module (details: Call to '{1}' failed)!", fullLicPath.string(), fctName))
-                    .addRefAndReturn();
-            return retVal;
+
+            auto errMsgReturn = daq::String(fmt::format("License library '{0}' is not a valid module (details: Call to '{1}' failed)!", licenseCheckerFullPath.string(), fctName));
+            *errMsg = errMsgReturn.addRefAndReturn();
+            return DAQ_MAKE_ERROR_INFO(retVal, errMsgReturn);
         }
     }
 
@@ -222,11 +227,11 @@ OPENDAQ_MODULE_API daq::ErrCode checkDependencies(daq::IString** errMsg)
 
 OPENDAQ_MODULE_API daq::ErrCode createModule(daq::IModule** module, daq::IContext* context)
 {
-    // ToDo: !!!Refuse to create the module if the license is not valid!!!
+    // !!!Refuse to create the module if the license is not valid!!!
     if (licenseCheckerPtr == nullptr)
     {
         _logger->error("Please call the 'checkDependencies' function first to verify that this module can actually be loaded and used!");
-        return OPENDAQ_ERR_CREATE_FAILED;
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_CREATE_FAILED, "'checkDependencies' function has either not been called or has failed!");
     }
 
     const auto errorCode = daq::createObject<daq::IModule, ProtectedAnalyticsModule>(module, context);
@@ -234,8 +239,9 @@ OPENDAQ_MODULE_API daq::ErrCode createModule(daq::IModule** module, daq::IContex
     {
         const auto pProtectedAnalyticsModule = dynamic_cast<ProtectedAnalyticsModule*>(*module);
         // Please note that we pass in a non-reference counted pointer of the license checker because
-        // the life time of 'pProtectedAnalyticsModule' MUST be shorter than the unloading of the module
-        // and we ensure that the license checker is unloaded when the module is unloaded (see: DllMain)
+        // the life time of the returned 'pProtectedAnalyticsModule' pointer MUST be shorter
+        // than the unloading of the module. And during the unloading of this module we ensure
+        // that the license checker is disposed (see: DllMain).
         pProtectedAnalyticsModule->setLicenseComponent(licenseCheckerPtr);
     }
 

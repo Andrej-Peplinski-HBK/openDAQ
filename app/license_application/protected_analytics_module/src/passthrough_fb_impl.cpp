@@ -1,13 +1,13 @@
-#include <protected_analytics_module/common.h>
-#include <protected_analytics_module/passthrough_fb_impl.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <opendaq/packet_factory.h>
 #include <opendaq/event_packet_ids.h>
 #include <opendaq/event_packet_params.h>
+#include <opendaq/packet_factory.h>
 #include <opendaq/reusable_data_packet_ptr.h>
+#include <protected_analytics_module/common.h>
+#include <protected_analytics_module/passthrough_fb_impl.h>
 
 BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
-namespace function_block {
+namespace function_block
+{
 
 daq::StringPtr strRequiredLicense("passthrough");
 
@@ -21,9 +21,7 @@ PassthroughFbImpl::PassthroughFbImpl(const ContextPtr& ctx,
 {
     assert(_licenseComponent != nullptr);
 
-    _logger = spdlog::stdout_color_mt("PassthroughFbImpl");
-
-    initComponentStatus();    
+    initComponentStatus();
     createInputPorts();
     createSignals();
 }
@@ -33,8 +31,14 @@ PassthroughFbImpl::~PassthroughFbImpl()
     {
         assert(_licenseComponent != nullptr);
 
-        if (OPENDAQ_FAILED(_licenseComponent->checkIn(strRequiredLicense, 1)))
-            _logger->error("The previously checked out license could not be checked in again!");
+        if (OPENDAQ_SUCCEEDED(_licenseComponent->checkIn(strRequiredLicense, 1)))
+        {
+            LOG_I("~PassthroughFbImpl({}): The previously checked out \"{}\" license was checked in again.", localId, strRequiredLicense);
+        }
+        else
+        {
+            LOG_C("~PassthroughFbImpl({}): The previously checked out \"{}\" license could not be checked in again!", localId, strRequiredLicense);
+        }
     }
 }
 
@@ -60,13 +64,13 @@ void PassthroughFbImpl::onConnected(const InputPortPtr& port)
     {
         if (OPENDAQ_SUCCEEDED(_licenseComponent->checkOut(strRequiredLicense, 1)))
         {
+            LOG_I("onConnected({}): Successfully checked out \"{}\" license.", localId, strRequiredLicense);
             _isLicenseCheckedOut = true;
             setComponentStatus(ComponentStatus::Ok);
-            _logger->info("onConnected: Successfully checked out '{}' license.", strRequiredLicense);
         }
         else
         {
-            _logger->warn("onConnected: Failed to check out required '{}' license!", strRequiredLicense);
+            LOG_W("onConnected({}): Failed to check out required \"{}\" license!", localId, strRequiredLicense);
             setComponentStatusWithMessage(ComponentStatus::Warning, "Required license is missing!");
         }
     }
@@ -78,11 +82,11 @@ void PassthroughFbImpl::onDisconnected(const InputPortPtr& port)
         if (OPENDAQ_SUCCEEDED(_licenseComponent->checkIn(strRequiredLicense, 1)))
         {
             _isLicenseCheckedOut = false;
-            _logger->info("onDisconnected: Successfully check in '{}' license.", strRequiredLicense);
+            LOG_I("onDisconnected({}): Successfully checked in \"{}\" license.", localId, strRequiredLicense);
         }
         else
         {
-            _logger->error("onDisconnected: Failed to check in '{}' license.", strRequiredLicense);
+            LOG_I("onDisconnected({}): Failed to check in \"{}\" license.", localId, strRequiredLicense);
         }
     }
 }
@@ -114,10 +118,12 @@ void PassthroughFbImpl::onPacketReceived(const InputPortPtr& port)
         packet = connection.dequeue();
     }
 
+    //You can safely ignore the incorrect C26110 warning in Visual Studio ("Caller failing to hold lock 'lock' before calling function '...'").
+    //Please also note that a "#pragma warning ignore" does not help to remove the squiggles in Visual Studio.
     if (outQueue.getCount() > 0)
     {
         _outputSignal.sendPackets(std::move(outQueue));
-        _outputDomainSignal.sendPackets(std::move(outDomainQueue));  // You can safely ignore the incorrect C26110 warning - Caller failing to hold lock 'lock' before calling function 'func'. Please also note that a "#pragma warning ignore" does not help to remove the squigglies in Visual Studio.
+        _outputDomainSignal.sendPackets(std::move(outDomainQueue));
     }
 }
 void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
@@ -126,42 +132,42 @@ void PassthroughFbImpl::processEventPacket(const EventPacketPtr& packet)
     {
         if (!_isLicenseCheckedOut)
         {
-            _logger->warn("Required license could not be checked out!");            
-            _outputSignal.setDescriptor(nullptr);
+            // Must NOT log any messages here because this function is called for every packet !!!
+            //LOG_W("processEventPacket({}): Required \"{}\" license could not be checked out!", localId, strRequiredLicense);
             return;
         }
 
         const DataDescriptorPtr inputDataDescriptor = packet.getParameters().get(event_packet_param::DATA_DESCRIPTOR);
         const DataDescriptorPtr inputDomainDataDescriptor = packet.getParameters().get(event_packet_param::DOMAIN_DATA_DESCRIPTOR);
 
-        const auto nullDataDescriptor = NullDataDescriptor();
-
-        if (!inputDataDescriptor.assigned() || inputDataDescriptor == nullDataDescriptor)
+        if (!inputDataDescriptor.assigned())
         {
-            _logger->error("processEventPacket: Input data descriptor is null!");
-            setComponentStatusWithMessage(ComponentStatus::Error, "Failed to set descriptor for output signal: Input data descriptor is null!");
+            //Setting the component status to Error (but only once otherwise we will be flooded by error log messages)
+            const auto oldStatus = statusContainer.getStatus("ComponentStatus");
+            const auto oldMessage = statusContainer.getStatusMessage("ComponentStatus");
+            const auto newMessage = "Failed to set descriptor for output signal: Input data descriptor has not been provided!";
+            if (!(oldStatus == ComponentStatus::Error) || oldMessage != newMessage)  //!= operator is currently not available for ComponentStatus (see: https://blueberrydaq.atlassian.net/servicedesk/customer/portal/34/SHS-175)
+                setComponentStatusWithMessage(ComponentStatus::Error, newMessage);
+
             _outputSignal.setDescriptor(nullptr);
             return;
         }
 
-        if (!inputDomainDataDescriptor.assigned() || inputDomainDataDescriptor == nullDataDescriptor)
+        if (!inputDomainDataDescriptor.assigned())
         {
-            _logger->error("processEventPacket: Input domain data descriptor is null!");
-            setComponentStatusWithMessage(ComponentStatus::Error, "Failed to set descriptor for output signal: Input domain data descriptor is null!");
+            const auto oldStatus = statusContainer.getStatus("ComponentStatus");
+            const auto oldMessage = statusContainer.getStatusMessage("ComponentStatus");
+            const auto newMessage = "Failed to set descriptor for output signal: Input domain data descriptor has not been provided!";
+            if (!(oldStatus == ComponentStatus::Error) || oldMessage != newMessage)
+                setComponentStatusWithMessage(ComponentStatus::Error, newMessage);
+
             _outputSignal.setDescriptor(nullptr);
             return;
         }
 
-        const auto inputSampleType = inputDataDescriptor.getSampleType();
-        const auto inputRange = inputDataDescriptor.getValueRange();
         const auto inputName = inputDataDescriptor.getName();
-        const auto inputUnit = inputDataDescriptor.getUnit();
-
-        auto outputDataDescriptorBuilder = DataDescriptorBuilder()
-            .setSampleType(inputSampleType)
-            .setValueRange(inputRange)
-            .setName(inputName.toStdString() + "/passthrough")
-            .setUnit(inputUnit);
+        auto outputDataDescriptorBuilder = DataDescriptorBuilderCopy(inputDataDescriptor)
+            .setName(inputName.toStdString() + "/passthrough");
 
         const auto outputDataDescriptor = outputDataDescriptorBuilder.build();
 
@@ -181,9 +187,8 @@ void PassthroughFbImpl::processDataPacket(DataPacketPtr&& packet, ListPtr<IPacke
 
     const auto outputDataDescriptor = _outputSignal.getDescriptor();
     const auto reusablePacket = packet.asPtrOrNull<IReusableDataPacket>(true);
-    if (reusablePacket.assigned()
-     && packet.getRefCount() == 1
-     && reusablePacket.reuse(outputDataDescriptor, std::numeric_limits<SizeT>::max(), nullptr, nullptr, false))
+    if (reusablePacket.assigned() && packet.getRefCount() == 1 &&
+        reusablePacket.reuse(outputDataDescriptor, std::numeric_limits<SizeT>::max(), nullptr, nullptr, false))
     {
         outputPacket = std::move(packet);
     }

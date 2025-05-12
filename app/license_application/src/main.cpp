@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm> // For std::find
+#include <thread>
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/dll/shared_library.hpp>
@@ -8,6 +9,11 @@
 #include <opendaq/opendaq.h>
 
 using namespace daq;
+
+const std::string Reset = "\033[0m";
+const std::string Red = "\033[31m";
+const std::string Green = "\033[32m";
+const std::string Yellow = "\033[33m";
 
 void printHelp()
 {
@@ -41,7 +47,7 @@ boost::filesystem::path getProtectedAnalyticsModulePath()
                 std::string filename = entry.path().filename().string();
                 if (filename.find("ProtectedAnalyticsModule") != std::string::npos && filename.find("module") != std::string::npos)
                 {
-                    std::cout << "Found matching module: " << filename << std::endl;
+                    std::cout << Green << "Found matching module: " << filename << Reset << std::endl;
                     matchingFiles.push_back(entry.path());
                 }
             }
@@ -49,7 +55,7 @@ boost::filesystem::path getProtectedAnalyticsModulePath()
     }
     catch (const boost::filesystem::filesystem_error& e)
     {
-        std::cerr << "Error scanning directory: " << e.what() << std::endl;
+        std::cerr << Red << "Error scanning directory: " << e.what() << Reset << std::endl;
     }
 
     // Use the first matching file if found, otherwise fall back to the default path
@@ -69,35 +75,18 @@ boost::filesystem::path getProtectedAnalyticsModulePath()
     throw boost::filesystem::filesystem_error("Unable to uniquely identify the ProtectedAnalyticsModule!",
                                               exePath,
                                               boost::system::errc::make_error_code(boost::system::errc::invalid_seek));
-
-    // //Check if we are in a debug build (by looking for the debug folder in the path)
-    // const auto itContainsDebug = std::find_if(exePath.begin(), exePath.end(), [](const auto& part) {
-    //     return part.string().find("debug") != std::string::npos;
-    // });
-
-    // #if _WIN32
-    // {
-    //     return exePath / "ProtectedAnalyticsModule-64-3-debug.module.dll";
-    // }
-    // #elif defined(__linux__)
-    // {
-    //     //E.g.: "/home/apeplinski/dev/SourceCode/GitHub/openDAQ/build/x64/gcc/full/debug/bin/libProtectedAnalyticsModule-64-3-debug.module.so"
-    //     boost::filesystem::path dllPath = exePath / "libProtectedAnalyticsModule-64-3-debug.module.so";
-    //     return dllPath;
-    // }
-    // #else
-    //     #pragma error "Unsupported platform!"
-    // #endif
 }
+
 int main(int argc, const char* argv[])
 {
     boost::dll::shared_library moduleProtectedAnalyticsModule;  //Define top-level object to ensure that the license library does not get unloaded after potentially having it loaded to set the license hash externally.
 
-    // Check for the user-supplied license hash
+    // Check for the user-supplied license hash (1. Environment variable)
     const auto envLicenseHash = std::getenv("DEBUG_SET_LICENSE_MODULE_HASH");
     std::string hash = envLicenseHash ? envLicenseHash : "";
     if (hash.empty())
     {
+        //2. Check for command line argument
         std::vector<uint8_t> expected_license_hashBuffer;
         for (auto i = 1; i < argc; ++i)
         {
@@ -112,8 +101,8 @@ int main(int argc, const char* argv[])
                         const auto hashValue = static_cast<uint8_t>(std::stoi(hash.substr(j, 2), nullptr, 16));
                         if (hashValue == 0)
                         {
-                            std::cerr << "Unable to handle hashes that contain 0s!" << std::endl;
-                            return 1;
+                            std::cerr << Red << "Unable to handle hashes that contain 0s!" << std::endl;
+                            return -1;
                         }
 
                         expected_license_hashBuffer[j / 2] = hashValue;
@@ -135,14 +124,14 @@ int main(int argc, const char* argv[])
         boost::dll::shared_library moduleLibrary(dllPath.c_str(), libraryErrCode);
         if (libraryErrCode)
         {
-            std::cerr << "Module \"" << dllPath << "\" failed to load. Error: " << libraryErrCode.value() << std::endl;
+            std::cerr << Red << "Module \"" << dllPath << "\" failed to load. Error: " << libraryErrCode.value() << std::endl;
             return 1;
         }
 
         const auto fctName = "demoOnlySetLicenseHash";
         if (!moduleLibrary.has(fctName))
         {
-            std::cerr << "The function \"" << fctName << "\" was not found in the module!" << std::endl;
+            std::cerr << Red << "The function \"" << fctName << "\" was not found in the module!" << std::endl;
             return 1;
         }
 
@@ -152,19 +141,19 @@ int main(int argc, const char* argv[])
         const ErrCode errCode = demoOnlySetLicenseHash(expected_license_hashBuffer.size(), &expected_license_hashBuffer[0]);
         if (OPENDAQ_FAILED(errCode))
         {
-            std::cerr << "Failed to set the license hash in the module!" << std::endl;
+            std::cerr << Red << "Failed to set the license hash in the module!" << std::endl;
             return 1;
         }
 
         moduleProtectedAnalyticsModule = std::move(moduleLibrary);  // Keep the module loaded until the end of the program
     }
 
-    // ToDo: Create an instance pointer that does NOT load any modules (see: https://opendaq.github.io/opendaq/dev/knowledge_base/modules.html)
+    // For different options on how to load modules see: https://opendaq.github.io/opendaq/dev/knowledge_base/modules.html
     const InstancePtr instance = Instance("");  //"[[none]]"
 
     // Verify that after start up our modules are loaded
-    // !!! Please note that on a PC you might not want to load any module due to security constraints. It might be better to verify the
-    // digital signature of known modules before hand...!!!
+    // !!! Please note that on a PC you might not want to load any kind of module due to security constraints. It might be better to verify the
+    // digital signature of known modules and only load those!!!
     const auto modules = instance.getModuleManager().getModules();
     auto itFound = std::find_if(modules.begin(),
                            modules.end(),
@@ -172,7 +161,7 @@ int main(int argc, const char* argv[])
 
     if (itFound == modules.end())
     {
-        std::cerr << "The 'ProtectedAnalyticsModule' was not found!" << std::endl << "Press any key to continue...";
+        std::cerr << Red << "The 'ProtectedAnalyticsModule' was not found!" << Reset << std::endl << "Press any key to continue...";
         std::cin.get();
         return 1;
     }
@@ -216,38 +205,74 @@ int main(int argc, const char* argv[])
     const auto packetTime = DataPacket(signalTime.getDescriptor(), noOfSamples, 0);
 
     const auto packetRamp = DataPacketWithDomain(packetTime, signalRamp.getDescriptor(), noOfSamples);
-    auto voltageData = static_cast<float*>(packetRamp.getRawData());
+    auto pRampDataRaw = static_cast<float*>(packetRamp.getRawData());
     for (size_t i = 0; i < noOfSamples; i++)
-        *voltageData++ = static_cast<float>(i);
+        *pRampDataRaw++ = static_cast<float>(i);
 
-    const auto reader = StreamReaderBuilder()
-                            .setSkipEvents(True)
+    const auto reader = StreamReaderBuilder() //BlockReaderBuilder().setBlockSize(noOfSamples)
                             .setSignal(outputSignal)
                             .setValueReadType(SampleType::Float32)
                             .setDomainReadType(SampleType::Int64)
                             .setReadMode(ReadMode::Scaled)
                             .setReadTimeoutType(ReadTimeoutType::All)
+                            .setSkipEvents(true)
                             .build();
 
     signalTime.sendPacket(packetTime);
     signalRamp.sendPacket(packetRamp);
 
+    // Wait for the reader to process the packets
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     std::vector<float> data(noOfSamples);
     std::vector<int64_t> time(noOfSamples);
 
+    int retVal = -1;
     SizeT noOfSamplesRead = noOfSamples;
-    reader.readWithDomain(data.data(), time.data(), &noOfSamplesRead, std::numeric_limits<daq::SizeT>().max());
+    const auto readerStatus = reader.readWithDomain(data.data(), time.data(), &noOfSamplesRead);
     //Check if we can read the data (otherwise, we might have had a license problem)...
     if (noOfSamplesRead == noOfSamples)
     {
         const auto cmp = std::memcmp(data.data(), packetRamp.getRawData(), noOfSamples * sizeof(float));
-        std::cout << "Read " << noOfSamplesRead << " samples. Compare: " << cmp << std::endl;
+        if (cmp == 0)
+        {
+            retVal = 0;
+            std::cout << Green << "Read all " << noOfSamplesRead << " samples and verified their correctness..."
+                      << Reset << std::endl;
+        }
+        else
+        {
+            std::cerr << Red << "Read all " << noOfSamplesRead << " samples but detected unexpected values (compare: " << cmp << ")!"
+                      << Reset << std::endl;
+        }
     }
     else
     {
-        const auto fbStatus = fb.getStatusContainer().getStatusMessage("ComponentStatus");
-        std::cerr << "Failed to read the expected number of samples (status: " << fbStatus << ")" 
-                  << std::endl;
+        std::string readerStatusStr;
+        switch (readerStatus.getReadStatus())
+        {
+            case ReadStatus::Ok:
+                readerStatusStr = "Ok";
+                break;
+            case ReadStatus::Fail:
+                readerStatusStr = "Fail";
+                break;
+            case ReadStatus::Event:
+                readerStatusStr = "Event";
+                break;
+            default:
+                readerStatusStr = "Unknown";
+                break;
+        }
+        
+        auto fbStatus = fb.getStatusContainer().getStatusMessage("ComponentStatus");
+        if (fbStatus.getLength() == 0)
+            fbStatus = "<OK>";
+
+        std::cerr << Red << "Failed to read the expected number of samples (reader status: "
+            << readerStatusStr << ", status of pass-through function block: "
+            << fbStatus << ")"
+            << Reset << std::endl;
         return -1;
     }
 

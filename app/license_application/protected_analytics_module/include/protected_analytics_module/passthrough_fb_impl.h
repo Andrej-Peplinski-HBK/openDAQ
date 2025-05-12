@@ -1,7 +1,6 @@
 #pragma once
 
 #include <protected_analytics_module/common.h>
-#include <spdlog/spdlog.h>
 #include <license_library/license_checker.h>
 #include <opendaq/function_block_impl.h>
 #include <opendaq/function_block_ptr.h>
@@ -35,7 +34,6 @@ private:
     void processDataPacket(DataPacketPtr&& packet, ListPtr<IPacket>& outQueue, ListPtr<IPacket>& outDomainQueue);
 
 private:
-    std::shared_ptr<spdlog::logger> _logger;
     daq::modules::license_library::ILicenseChecker* _licenseComponent;
     bool _isLicenseCheckedOut;
     InputPortPtr _inputPort;
