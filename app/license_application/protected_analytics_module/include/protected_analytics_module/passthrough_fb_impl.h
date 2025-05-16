@@ -26,7 +26,7 @@ namespace function_block
  * - The class provides static methods for type creation and identification.
  * - It overrides specific methods from the base FunctionBlock class to handle
  *   connection, disconnection, and packet reception events.
- * - It integrates with the license library to ensure proper licensing.
+ * - It integrates with the license library to ensure proper license checking.
  */
 class PassthroughFbImpl final : public FunctionBlock
 {
@@ -57,6 +57,7 @@ private:
     SignalConfigPtr _outputSignal;
     SignalConfigPtr _outputDomainSignal;
 };
+/*!@}*/
 
 }
 END_NAMESPACE_PROTECTED_ANALYTICS_MODULE

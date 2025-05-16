@@ -4,7 +4,6 @@
 #include <protected_analytics_module/passthrough_fb_impl.h>
 #include <protected_analytics_module/protected_analytics_module_impl.h>
 #include <protected_analytics_module/version.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
 
@@ -48,9 +47,9 @@ FunctionBlockPtr ProtectedAnalyticsModule::onCreateFunctionBlock(const StringPtr
         return createWithImplementation<IFunctionBlock, function_block::PassthroughFbImpl>(context, parent, localId, _licenseComponent);
 
     loggerComponent->logMessage(SourceLocation{__FILE__, __LINE__, OPENDAQ_CURRENT_FUNCTION},
-                                      fmt::format("Function block \"{}\" not found", id).c_str(),
+                                      fmt::format("Function block \"{}\" has not been implemented in this module!", id).c_str(),
                                       LogLevel::Warn);
-    DAQ_THROW_EXCEPTION(NotFoundException, "Function block of  not found");
+    DAQ_THROW_EXCEPTION(InvalidParameterException, "Function block of type \"{}\" has not been implemented in this module!", id);
 }
 
 END_NAMESPACE_PROTECTED_ANALYTICS_MODULE
