@@ -177,17 +177,12 @@ daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8
 }
 
 #else
-    //Must not issue warning because it causes build problems on
-    // * Ubuntu 22.04 - clang 14 configuration  (see: https://github.com/Andrej-Peplinski-HBK/openDAQ/actions/runs/14894021156/job/41832684391)
-    // * manylinux - gcc configuration          (see: https://github.com/Andrej-Peplinski-HBK/openDAQ/actions/runs/14894021156/job/41832684425)
-    // * macos-13 - clang configuration         (see: https://github.com/Andrej-Peplinski-HBK/openDAQ/actions/runs/14894021156/job/41832684386)
-    //#warning "A valid implementation of 'CanTrustLicenseModule' is not available for this platform."
 
     daq::ErrCode CanTrustLicenseModule(const fs::path& path, const std::vector<uint8_t>& expected_license_hashBuffer, daq::IString** errMsg)
     {
         std::cerr << "The verification of the license module has not been implemented!!!" << std::endl;
         
-        //Use cmake commands to sign the file
+        //Possible implementation strategy: Use cmake commands to sign the file
         // openssl genpkey -algorithm RSA -out private_key.pem        
         // openssl rsa -pubout -in private_key.pem -out public_key.pem
         // openssl dgst -sha256 -sign private_key.pem -out tmplibLicenseLibrary.signature libLicenseLibrary-64-3-signed.so

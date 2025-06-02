@@ -9,7 +9,7 @@ BEGIN_NAMESPACE_PROTECTED_ANALYTICS_MODULE
 namespace function_block
 {
 
-daq::StringPtr strRequiredLicense("passthrough");
+const daq::StringPtr strRequiredLicense("passthrough");
 
 PassthroughFbImpl::PassthroughFbImpl(const ContextPtr& ctx,
                                      const ComponentPtr& parent,
